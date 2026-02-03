@@ -23,12 +23,14 @@ buildSync({
 	banner: {
 		js: userscriptHeader,
 	},
-	outfile: "./dist/kt-ongeki-site-importer.user.js",
+	outfile: "./docs/kt-ongeki-site-importer.user.js",
 });
 
 buildSync({
 	entryPoints: ["./src/ongeki-importer/index.user.ts"],
 	minify: true,
 	bundle: true,
-	outfile: "./dist/kt-ongeki-site-importer.min.js",
+	outfile: "./docs/kt-ongeki-site-importer.min.js",
 });
+
+fs.copyFileSync("./README.md", "./docs/README.md");
