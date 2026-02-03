@@ -1,0 +1,29 @@
+{
+  "name": "kt-ongeki-site-importer",
+  "version": "1.0.0",
+  "description": "Import scores from https://ongeki-net.com to Kamaitachi",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Umi4Life/kt-ongeki-site-importer.git"
+  },
+  "keywords": [],
+  "author": "Umi4Life",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Umi4Life/kt-ongeki-site-importer/issues"
+  },
+  "homepage": "https://github.com/Umi4Life/kt-ongeki-site-importer#readme",
+  "dependencies": {
+    "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4"
+  }
+}
