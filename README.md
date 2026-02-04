@@ -30,8 +30,8 @@ javascript:void(function(d){if(['ongeki-net.com'].includes(d.location.host))docu
 
 ## Development
 1. Edit files in `src/ongeki-inporter`
-2. run `npm run build` in terminal
+2. Run `npm run build` in terminal
 3. Userscript will be output to `docs/kt-ongeki-site-importer.user.js`
 
 ## TODO
-- [] switch to bundlemonkey for bundling typescript to userscript
+- [ ] switch to bundlemonkey for better bundling
