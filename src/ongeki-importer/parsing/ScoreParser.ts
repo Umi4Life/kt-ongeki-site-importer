@@ -1,0 +1,178 @@
+import { BatchManualScore, OngekiDifficulty } from "../models/types";
+import { OngekiNetClient } from "../api/OngekiNetClient";
+import { DifficultyExtractor } from "./DifficultyExtractor";
+import { LampCalculator } from "./LampCalculator";
+import { DateParser } from "../utils/DateParser";
+import { ParseError } from "../models/errors";
+import { ONGEKI_NET_BASE_URL } from "../utils/Constants";
+import { DupeSongConverter } from "./DupeSongConverter";
+
+export class ScoreParser {
+    private static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
+
+	static parseRecentScore(element: HTMLElement | Document, isDetailPage = false): BatchManualScore {
+		let title = element.querySelector<HTMLDivElement>(
+			".m_5.l_h_10.break",
+		)?.innerText.trim();
+
+		if (!title) {
+			throw new ParseError(
+				"ScoreParser.parseRecentScore",
+				"Recent score card does not contain a title.",
+			);
+		}
+
+		let matchType = "songTitle";
+		if (isDetailPage) {
+			switch (title) {
+				case "Singularity":
+					title = DupeSongConverter.processSingularityToTachiID(element);
+					matchType = "tachiSongID";
+					break;
+				case "Perfect Shining!!":
+					title = DupeSongConverter.processPerfectShiningToInGameID(element);
+					matchType = "inGameID";
+					break;
+			}
+		}
+
+		const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
+
+		const timestamp = element.querySelector<HTMLElement>(
+			".f_r.f_12.h_10",
+		)?.innerText;
+		const timeAchieved = timestamp ? DateParser.parse(timestamp).valueOf() : null;
+
+		const score = Number(
+			element.querySelector<HTMLElement>('.technical_score_block .f_20, .technical_score_block_new .f_20')
+				?.textContent.replace(/,/gu, ""),
+		);
+
+		const lampImages = [
+			...element.querySelectorAll<HTMLImageElement>(".clearfix.p_t_5.t_l.f_0 img"),
+		].map((e) => e.src);
+
+		const lamps = LampCalculator.calculate(lampImages);
+
+		const scoreData: BatchManualScore = {
+			score,
+			platinumScore: 0,
+			...lamps,
+			matchType,
+			identifier: title,
+			difficulty,
+			timeAchieved,
+		};
+
+		// Parse optional judgements data
+		try {
+			scoreData.judgements = {
+				cbreak: Number(element.querySelector<HTMLElement>(".score_critical_break .f_b")?.textContent?.replace(/,/gu, "")),
+				break: Number(element.querySelector<HTMLElement>(".score_break .f_b")?.textContent?.replace(/,/gu, "")),
+				hit: Number(element.querySelector<HTMLElement>(".score_hit .f_b")?.textContent?.replace(/,/gu, "")),
+				miss: Number(element.querySelector<HTMLElement>(".score_miss .f_b")?.textContent?.replace(/,/gu, "")),
+			};
+		} catch (_) {}
+
+		scoreData.optional = {};
+
+		// Parse max combo
+		try {
+			const maxComboElement = element
+				.querySelector<HTMLElement>('img[src*="score_max_combo.png"]')
+				?.closest("tr")
+				?.querySelector("td");
+			scoreData.optional.maxCombo = maxComboElement
+				? Number(maxComboElement.textContent?.replace(/,/g, ""))
+				: undefined;
+		} catch (_) {}
+
+		// Parse damage
+		try {
+			scoreData.optional.damage = Number(
+				element.querySelector<HTMLElement>("tr.score_damage td")?.textContent?.replace(/,/gu, ""),
+			);
+		} catch (_) {}
+
+		// Parse bell count
+		try {
+			const bellText = element.querySelector<HTMLElement>(".score_bell .f_b")?.textContent?.split("/");
+			scoreData.optional.bellCount = Number(bellText?.[0]?.replace?.(/,/gu, ""));
+			scoreData.optional.totalBellCount = Number(bellText?.[1]?.replace?.(/,/gu, ""));
+		} catch (_) {}
+
+		return scoreData;
+	}
+
+    static async parsePersonalBestScore(element: HTMLElement | Document, difficulty: OngekiDifficulty): Promise<BatchManualScore> {
+        let identifier = element.querySelector<HTMLInputElement>(
+            "div.music_label.p_5.break",
+        )?.textContent;
+
+        if (!identifier) {
+            throw new ParseError(
+                "ScoreParser.parsePersonalBestScore",
+                "Personal best score does not contain a title.",
+            );
+        }
+
+        let matchType = "songTitle";
+        if (identifier === "Singularity") {
+            const detailDocument = new DOMParser().parseFromString(
+                await this.ongekiNetClient
+                    .getMusicDetail(
+                        element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
+                    )
+                    .then((r: { text: () => any; }) => r.text()),
+                "text/html",
+            );
+            identifier = DupeSongConverter.processSingularityToTachiID(detailDocument);
+            matchType = "tachiSongID";
+        } else if (identifier === "Perfect Shining!!") {
+            const detailDocument = new DOMParser().parseFromString(
+                await this.ongekiNetClient
+                    .getMusicDetail(
+                        element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
+                    )
+                    .then((r: { text: () => any; }) => r.text()),
+                "text/html",
+            );
+            identifier = DupeSongConverter.processPerfectShiningToInGameID(detailDocument);
+            matchType = "inGameID";
+        }
+
+        const score = Number(
+            [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
+                .map((td) => td.textContent.trim())[2]
+                .replace(/,/g, ""),
+        );
+
+        const lampImages = [
+            ...element.querySelectorAll<HTMLImageElement>(
+                ".music_score_icon_area.t_r.f_0 img",
+            ),
+        ].map((e) => e.src);
+
+        const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages);
+
+        const platinumScore = Number(
+            element
+                .querySelector<HTMLElement>(`.t_r.platinum_high_score_text_block`)
+                ?.textContent.split("/")[0]
+                .trim()
+                .replace(/,/g, ""),
+        );
+
+        const scoreData: BatchManualScore = {
+            score,
+            platinumScore,
+            noteLamp,
+            bellLamp,
+            matchType,
+            identifier,
+            difficulty,
+        };
+
+        return scoreData;
+    }
+}
