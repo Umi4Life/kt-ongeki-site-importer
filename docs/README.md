@@ -22,16 +22,17 @@ javascript:void(function(d){if(['ongeki-net.com'].includes(d.location.host))docu
 ```
 
 ## Usage
-1. Go to ONGEKI-NET ([Japan](https://ongeki-net.com/)) and log in.
+1. Go to ONGEKI-NET ([International](https://www.youtube.com/watch?v=dQw4w9WgXcQ), [Japan](https://ongeki-net.com/)) and log in.
 2. Set up your API key following the instructions you see on the page.
 3. ALWAYS IMPORT RECENT SCORES FIRST.
 4. Jump to recent scores page, and click the "Import recent scores" button.
-5. To backfill all PBs, jump to the PBs page and click the "Import all PBs" button.
+5. Note that recent import cannot grab platinum score, you'll need to backfill all PBs to update those.
+6. To backfill all PBs, jump to the PBs page and click the "Import all PBs" button.
 
 ## Development
 1. Edit files in `src/ongeki-inporter`
-2. run `npm run build` in terminal
+2. Run `npm run build` in terminal
 3. Userscript will be output to `docs/kt-ongeki-site-importer.user.js`
 
 ## TODO
-- [] switch to bundlemonkey for bundling typescript to userscript
+- [ ] switch to bundlemonkey for better bundling
