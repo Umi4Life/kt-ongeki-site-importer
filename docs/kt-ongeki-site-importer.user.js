@@ -335,7 +335,34 @@ var DateParser = class {
 };
 
 // src/ongeki-importer/parsing/DupeSongConverter.ts
+var DUPE_SONGS = [
+  "Singularity",
+  "Perfect Shining!!",
+  "Hand in Hand"
+];
 var DupeSongConverter = class {
+  static isDupeSong(title) {
+    return DUPE_SONGS.includes(title);
+  }
+  static convertTitleToTachiID(title, doc) {
+    switch (title) {
+      case "Singularity":
+        return this.processSingularityToTachiID(doc);
+      case "Perfect Shining!!":
+        return this.processPerfectShiningToTachiID(doc);
+      case "Hand in Hand":
+        return this.processHandinHandToTachiID(doc);
+      default:
+        throw new ParseError(
+          "DupeSongConverter.convertTitleToTachiID",
+          `Unknown dupe song title: ${title}`
+        );
+    }
+  }
+  // Always returns TachiID to prevent ambiguous import, one varient has been removed from official
+  static processHandinHandToTachiID(_) {
+    return "337";
+  }
   static processSingularityToTachiID(doc) {
     const imgSrc = doc.querySelector("img.m_5.f_l")?.src;
     switch (imgSrc) {
@@ -352,15 +379,15 @@ var DupeSongConverter = class {
         );
     }
   }
-  static processPerfectShiningToInGameID(doc) {
+  static processPerfectShiningToTachiID(doc) {
     if (doc.textContent?.includes("\u661F\u54B2 \u3042\u304B\u308A Lv.1")) {
-      return "8003";
+      return "817";
     } else if (doc.textContent?.includes("\u661F\u54B2 \u3042\u304B\u308A Lv.39")) {
-      return "8091";
+      return "69";
     }
     throw new ParseError(
-      "DupeSongConverter.processPerfectShiningToInGameID",
-      "Unknown Perfect Shining!! variant, check Lunatic chart list."
+      "DupeSongConverter.processPerfectShiningToTachiID",
+      "Unknown Perfect Shining!! variant."
     );
   }
 };
@@ -369,27 +396,19 @@ var DupeSongConverter = class {
 var ScoreParser = class {
   static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
   static parseRecentScore(element, isDetailPage = false) {
-    let title = element.querySelector(
+    let identifier = element.querySelector(
       ".m_5.l_h_10.break"
     )?.innerText.trim();
-    if (!title) {
+    if (!identifier) {
       throw new ParseError(
         "ScoreParser.parseRecentScore",
-        "Recent score card does not contain a title."
+        "Recent score card does not contain an identifier."
       );
     }
     let matchType = "songTitle";
-    if (isDetailPage) {
-      switch (title) {
-        case "Singularity":
-          title = DupeSongConverter.processSingularityToTachiID(element);
-          matchType = "tachiSongID";
-          break;
-        case "Perfect Shining!!":
-          title = DupeSongConverter.processPerfectShiningToInGameID(element);
-          matchType = "inGameID";
-          break;
-      }
+    if (DupeSongConverter.isDupeSong(identifier)) {
+      identifier = DupeSongConverter.convertTitleToTachiID(identifier, element);
+      matchType = "tachiSongID";
     }
     const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
     const timestamp = element.querySelector(
@@ -408,7 +427,7 @@ var ScoreParser = class {
       platinumScore: 0,
       ...lamps,
       matchType,
-      identifier: title,
+      identifier,
       difficulty,
       timeAchieved
     };
@@ -452,24 +471,15 @@ var ScoreParser = class {
       );
     }
     let matchType = "songTitle";
-    if (identifier === "Singularity") {
+    if (DupeSongConverter.isDupeSong(identifier)) {
       const detailDocument = new DOMParser().parseFromString(
         await this.ongekiNetClient.getMusicDetail(
           element.querySelector("input[name=idx]")?.value || ""
         ).then((r) => r.text()),
         "text/html"
       );
-      identifier = DupeSongConverter.processSingularityToTachiID(detailDocument);
+      identifier = DupeSongConverter.convertTitleToTachiID(identifier, detailDocument);
       matchType = "tachiSongID";
-    } else if (identifier === "Perfect Shining!!") {
-      const detailDocument = new DOMParser().parseFromString(
-        await this.ongekiNetClient.getMusicDetail(
-          element.querySelector("input[name=idx]")?.value || ""
-        ).then((r) => r.text()),
-        "text/html"
-      );
-      identifier = DupeSongConverter.processPerfectShiningToInGameID(detailDocument);
-      matchType = "inGameID";
     }
     const score = Number(
       [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)].map((td) => td.textContent.trim())[2].replace(/,/g, "")

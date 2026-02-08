@@ -11,29 +11,21 @@ export class ScoreParser {
     private static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
 
 	static parseRecentScore(element: HTMLElement | Document, isDetailPage = false): BatchManualScore {
-		let title = element.querySelector<HTMLDivElement>(
+		let identifier = element.querySelector<HTMLDivElement>(
 			".m_5.l_h_10.break",
 		)?.innerText.trim();
 
-		if (!title) {
+		if (!identifier) {
 			throw new ParseError(
 				"ScoreParser.parseRecentScore",
-				"Recent score card does not contain a title.",
+				"Recent score card does not contain an identifier.",
 			);
 		}
 
 		let matchType = "songTitle";
-		if (isDetailPage) {
-			switch (title) {
-				case "Singularity":
-					title = DupeSongConverter.processSingularityToTachiID(element);
-					matchType = "tachiSongID";
-					break;
-				case "Perfect Shining!!":
-					title = DupeSongConverter.processPerfectShiningToInGameID(element);
-					matchType = "inGameID";
-					break;
-			}
+		if (DupeSongConverter.isDupeSong(identifier)) {
+			identifier = DupeSongConverter.convertTitleToTachiID(identifier, element);
+			matchType = "tachiSongID";
 		}
 
 		const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
@@ -59,7 +51,7 @@ export class ScoreParser {
 			platinumScore: 0,
 			...lamps,
 			matchType,
-			identifier: title,
+			identifier: identifier,
 			difficulty,
 			timeAchieved,
 		};
@@ -116,30 +108,19 @@ export class ScoreParser {
             );
         }
 
-        let matchType = "songTitle";
-        if (identifier === "Singularity") {
-            const detailDocument = new DOMParser().parseFromString(
-                await this.ongekiNetClient
-                    .getMusicDetail(
-                        element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
-                    )
-                    .then((r: { text: () => any; }) => r.text()),
-                "text/html",
+		let matchType = "songTitle";
+		if (DupeSongConverter.isDupeSong(identifier)) {
+			const detailDocument = new DOMParser().parseFromString(
+			await this.ongekiNetClient
+					.getMusicDetail(
+						element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
+					)
+					.then((r: { text: () => any; }) => r.text()),
+				"text/html",
             );
-            identifier = DupeSongConverter.processSingularityToTachiID(detailDocument);
-            matchType = "tachiSongID";
-        } else if (identifier === "Perfect Shining!!") {
-            const detailDocument = new DOMParser().parseFromString(
-                await this.ongekiNetClient
-                    .getMusicDetail(
-                        element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
-                    )
-                    .then((r: { text: () => any; }) => r.text()),
-                "text/html",
-            );
-            identifier = DupeSongConverter.processPerfectShiningToInGameID(detailDocument);
-            matchType = "inGameID";
-        }
+			identifier = DupeSongConverter.convertTitleToTachiID(identifier, detailDocument);
+			matchType = "tachiSongID";
+		}
 
         const score = Number(
             [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
