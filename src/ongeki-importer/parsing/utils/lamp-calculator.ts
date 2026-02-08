@@ -1,4 +1,4 @@
-import { OngekiNoteLamp, OngekiBellLamp, LampResult } from "../models/types";
+import { OngekiNoteLamp, OngekiBellLamp, LampResult } from "../../models/types";
 
 export class LampCalculator {
 	static calculate(lampImages: Array<string>, isPB: boolean = false): LampResult {

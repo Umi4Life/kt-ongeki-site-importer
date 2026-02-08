@@ -1,5 +1,5 @@
-import { ParseError } from "../models/errors";
-import { OngekiDifficulty } from "../models/types";
+import { ParseError } from "../../models/errors";
+import { OngekiDifficulty } from "../../models/types";
 
 export class DifficultyExtractor {
 	static extractFromImage(row: Element | Document, selector: string): OngekiDifficulty {

@@ -1,6 +1,6 @@
-import { KT_LOCALSTORAGE_KEY_PREFIX, KT_SELECTED_CONFIG } from "./Constants";
+import { KT_LOCALSTORAGE_KEY_PREFIX, KT_SELECTED_CONFIG } from "../../utils/constants";
 
-export class PreferenceManager {
+export class Preference {
 	static get(key: string): string | null {
 		return localStorage.getItem(`${KT_LOCALSTORAGE_KEY_PREFIX}${key}_${KT_SELECTED_CONFIG}`);
 	}

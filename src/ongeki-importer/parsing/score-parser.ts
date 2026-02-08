@@ -1,11 +1,11 @@
 import { BatchManualScore, OngekiDifficulty } from "../models/types";
-import { OngekiNetClient } from "../api/OngekiNetClient";
-import { DifficultyExtractor } from "./DifficultyExtractor";
-import { LampCalculator } from "./LampCalculator";
-import { DateParser } from "../utils/DateParser";
+import { OngekiNetClient } from "../api/ongeki-net-client";
+import { DifficultyExtractor } from "./utils/difficulty-extractor";
+import { LampCalculator } from "./utils/lamp-calculator";
+import { DateParser } from "../utils/date-parser";
 import { ParseError } from "../models/errors";
-import { ONGEKI_NET_BASE_URL } from "../utils/Constants";
-import { DupeSongConverter } from "./DupeSongConverter";
+import { ONGEKI_NET_BASE_URL } from "../utils/constants";
+import { DupeSongHandler } from "./utils/dupe-song-handler";
 
 export class ScoreParser {
     private static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
@@ -23,8 +23,8 @@ export class ScoreParser {
 		}
 
 		let matchType = "songTitle";
-		if (DupeSongConverter.isDupeSong(identifier)) {
-			identifier = DupeSongConverter.convertTitleToTachiID(identifier, element);
+		if (DupeSongHandler.isDupeSong(identifier)) {
+			identifier = DupeSongHandler.convertTitleToTachiID(identifier, element);
 			matchType = "tachiSongID";
 		}
 
@@ -109,7 +109,7 @@ export class ScoreParser {
         }
 
 		let matchType = "songTitle";
-		if (DupeSongConverter.isDupeSong(identifier)) {
+		if (DupeSongHandler.isDupeSong(identifier)) {
 			const detailDocument = new DOMParser().parseFromString(
 			await this.ongekiNetClient
 					.getMusicDetail(
@@ -118,7 +118,7 @@ export class ScoreParser {
 					.then((r: { text: () => any; }) => r.text()),
 				"text/html",
             );
-			identifier = DupeSongConverter.convertTitleToTachiID(identifier, detailDocument);
+			identifier = DupeSongHandler.convertTitleToTachiID(identifier, detailDocument);
 			matchType = "tachiSongID";
 		}
 

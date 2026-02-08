@@ -1,28 +1,28 @@
 import {
 	KamaitachiAPIResponse,
 	QueuedImport,
-	ImportStatus,
+	ImportStatus as ImportStatusType,
 	SubmitScoresOptions,
 	BatchManualScore,
 } from "../models/types";
-import { PreferenceManager } from "../utils/PreferenceManager";
-import { StatusDisplay } from "../ui/StatusDisplay";
-import { KT_BASE_URL, __DEV__, KT_SELECTED_CONFIG } from "../utils/Constants";
+import { Preference } from "../ui-component/utils/preference";
+import { ImportStatus } from "../ui-component/widgets/import-status";
+import { KT_BASE_URL, __DEV__, KT_SELECTED_CONFIG } from "../utils/constants";
 
 export class KamaitachiClient {
 
 	static async submitScores(options: SubmitScoresOptions): Promise<void> {
 		const { scores: newScores = [] } = options;
 		const scores: Array<BatchManualScore> = JSON.parse(
-			PreferenceManager.getScores(),
+			Preference.getScores(),
 		);
 
 		// Save scores in localStorage in case Kamaitachi is down
 		scores.push(...newScores);
-		PreferenceManager.setScores(JSON.stringify(scores));
+		Preference.setScores(JSON.stringify(scores));
 
 		if (scores.length === 0) {
-			StatusDisplay.update("Nothing to import.");
+			ImportStatus.update("Nothing to import.");
 			return;
 		}
 
@@ -57,32 +57,32 @@ export class KamaitachiClient {
 		const jsonBody = JSON.stringify(body);
 
 		document.querySelector("#kt-import-button")?.remove();
-		StatusDisplay.update("Submitting scores...");
+		ImportStatus.update("Submitting scores...");
 
 		let resp: KamaitachiAPIResponse<QueuedImport>;
 		try {
 			resp = await fetch(`${KT_BASE_URL}/ir/direct-manual/import`, {
 				method: "POST",
 				headers: {
-					authorization: `Bearer ${PreferenceManager.getApiKey()}`,
+					authorization: `Bearer ${Preference.getApiKey()}`,
 					"content-type": "application/json",
 					"x-user-intent": "true",
 				},
 				body: jsonBody,
 			}).then((r) => r.json());
 		} catch (e) {
-			StatusDisplay.update(
+			ImportStatus.update(
 				`Could not submit scores to Kamaitachi: ${e}\nYour scores are saved in browser storage and will be submitted next import.`,
 			);
 			return;
 		}
 
 		// When we reach this point, Kamaitachi has received and stored our import.
-		PreferenceManager.setScores("[]");
-		PreferenceManager.setClasses("{}");
+		Preference.setScores("[]");
+		Preference.setClasses("{}");
 
 		if (!resp.success) {
-			StatusDisplay.update(
+			ImportStatus.update(
 				`Could not submit scores to Kamaitachi: ${resp.description}`,
 			);
 			return;
@@ -90,7 +90,7 @@ export class KamaitachiClient {
 
 		const pollUrl = resp.body.url;
 
-		StatusDisplay.update("Importing scores...");
+		ImportStatus.update("Importing scores...");
 		await this.pollStatus(pollUrl, options);
 	}
 
@@ -98,15 +98,15 @@ export class KamaitachiClient {
 		pollUrl: string,
 		importOptions: SubmitScoresOptions,
 	): Promise<void> {
-		const body: KamaitachiAPIResponse<ImportStatus> = await fetch(pollUrl, {
+		const body: KamaitachiAPIResponse<ImportStatusType> = await fetch(pollUrl, {
 			method: "GET",
 			headers: {
-				Authorization: `Bearer ${PreferenceManager.getApiKey()}`,
+				Authorization: `Bearer ${Preference.getApiKey()}`,
 			},
 		}).then((r) => r.json());
 
 		if (!body.success) {
-			StatusDisplay.update(`Terminal error: ${body.description}`);
+			ImportStatus.update(`Terminal error: ${body.description}`);
 			return;
 		}
 
@@ -116,7 +116,7 @@ export class KamaitachiClient {
 					? body.body.progress.toString()
 					: body.body.progress.description;
 
-			StatusDisplay.update(
+			ImportStatus.update(
 				`Importing scores... ${body.description} Progress: ${progress}`,
 			);
 			setTimeout(() => this.pollStatus(pollUrl, importOptions), 1000);
@@ -134,6 +134,6 @@ export class KamaitachiClient {
 			}
 		}
 
-		StatusDisplay.update(message);
+		ImportStatus.update(message);
 	}
 }

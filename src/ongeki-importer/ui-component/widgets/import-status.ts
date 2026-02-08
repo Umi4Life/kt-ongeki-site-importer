@@ -1,12 +1,12 @@
-export class StatusDisplay {
-	private static readonly STATUS_ELEMENT_ID = "#kt-import-status";
+export class ImportStatus {
+	private static readonly STATUS_ID = "#kt-import-status";
 
 	static update(message: string): void {
-		let statusElem = document.querySelector<HTMLParagraphElement>(this.STATUS_ELEMENT_ID);
+		let statusElem = document.querySelector<HTMLParagraphElement>(this.STATUS_ID);
 
 		if (!statusElem) {
 			statusElem = document.createElement("p");
-			statusElem.id = this.STATUS_ELEMENT_ID.substring(1); // Remove the #
+			statusElem.id = this.STATUS_ID.substring(1); // Remove the #
 			statusElem.style.cssText =
 				"text-align: center; background-color: #fff;";
 
@@ -18,6 +18,6 @@ export class StatusDisplay {
 	}
 
 	static clear(): void {
-		document.querySelector<HTMLElement>(this.STATUS_ELEMENT_ID)?.remove();
+		document.querySelector<HTMLElement>(this.STATUS_ID)?.remove();
 	}
 }

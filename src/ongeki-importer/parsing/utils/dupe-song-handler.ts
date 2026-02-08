@@ -1,4 +1,4 @@
-import { ParseError } from "../models/errors";
+import { ParseError } from "../../models/errors";
 
 const DUPE_SONGS = [
 	"Singularity",
@@ -6,7 +6,7 @@ const DUPE_SONGS = [
 	"Hand in Hand",
 ] as const;
 
-export class DupeSongConverter {
+export class DupeSongHandler {
 
 	static isDupeSong(title: string): title is (typeof DUPE_SONGS)[number] {
 		return DUPE_SONGS.includes(title as (typeof DUPE_SONGS)[number]);

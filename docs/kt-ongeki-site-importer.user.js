@@ -11,7 +11,7 @@
 // @require    https://cdn.jsdelivr.net/npm/@trim21/gm-fetch
 // ==/UserScript==
 
-// src/ongeki-importer/ui/ImportButton.ts
+// src/ongeki-importer/ui-component/widgets/import-button.ts
 var ImportButton = class {
   static BUTTON_ID = "kt-import-button";
   static BUTTON_STYLES = "color:#fff;font-size:1em;font-weight:bold;padding:1rem;margin:1rem auto;display:block;width:-moz-fit-content;width:fit-content;text-decoration:none;border-radius:.5rem;border:3px solid #567;background-color:#234;text-align:center;cursor:pointer;-webkit-user-select:none;-ms-user-select:none;user-select:none;filter:brightness(0.7);transition:.2s";
@@ -33,14 +33,14 @@ var ImportButton = class {
   }
 };
 
-// src/ongeki-importer/ui/StatusDisplay.ts
-var StatusDisplay = class {
-  static STATUS_ELEMENT_ID = "#kt-import-status";
+// src/ongeki-importer/ui-component/widgets/import-status.ts
+var ImportStatus = class {
+  static STATUS_ID = "#kt-import-status";
   static update(message) {
-    let statusElem = document.querySelector(this.STATUS_ELEMENT_ID);
+    let statusElem = document.querySelector(this.STATUS_ID);
     if (!statusElem) {
       statusElem = document.createElement("p");
-      statusElem.id = this.STATUS_ELEMENT_ID.substring(1);
+      statusElem.id = this.STATUS_ID.substring(1);
       statusElem.style.cssText = "text-align: center; background-color: #fff;";
       const prevElem = document.querySelector(".title");
       prevElem?.insertAdjacentElement("afterend", statusElem);
@@ -48,11 +48,11 @@ var StatusDisplay = class {
     statusElem.innerText = message;
   }
   static clear() {
-    document.querySelector(this.STATUS_ELEMENT_ID)?.remove();
+    document.querySelector(this.STATUS_ID)?.remove();
   }
 };
 
-// src/ongeki-importer/utils/Constants.ts
+// src/ongeki-importer/utils/constants.ts
 var KT_LOCALSTORAGE_KEY_PREFIX = "__ktimport__";
 var KT_SELECTED_CONFIG = "prod";
 var KT_CONFIGS = {
@@ -67,8 +67,8 @@ var ONGEKI_NET_BASE_URL = "https://ongeki-net.com/ongeki-mobile/";
 var __DEV__ = false;
 var ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"];
 
-// src/ongeki-importer/utils/PreferenceManager.ts
-var PreferenceManager = class {
+// src/ongeki-importer/ui-component/utils/preference.ts
+var Preference = class {
   static get(key) {
     return localStorage.getItem(`${KT_LOCALSTORAGE_KEY_PREFIX}${key}_${KT_SELECTED_CONFIG}`);
   }
@@ -113,7 +113,7 @@ var ParseError = class extends Error {
   }
 };
 
-// src/ongeki-importer/api/OngekiNetClient.ts
+// src/ongeki-importer/api/ongeki-net-client.ts
 var OngekiNetClient = class {
   constructor(baseUrl) {
     this.baseUrl = baseUrl;
@@ -140,7 +140,7 @@ var OngekiNetClient = class {
     const resp = await fetch(url, init);
     const respUrl = new URL(resp.url);
     if (resp.status === 503) {
-      StatusDisplay.update("ONGEKI.NET is currently under maintenance. Please try again later.");
+      ImportStatus.update("ONGEKI.NET is currently under maintenance. Please try again later.");
       throw new Error("ONGEKI.NET is under maintenance");
     }
     if (respUrl.pathname.endsWith("/error/")) {
@@ -157,7 +157,7 @@ var OngekiNetClient = class {
     const errCodeElem = errorElems[0];
     const errCode = errCodeElem?.textContent ? Number(errCodeElem.textContent.split(": ")[1]) : -1;
     const errDescription = errorElems.length > 1 && errorElems[1].textContent ? errorElems[1].textContent : "An unknown error occurred.";
-    StatusDisplay.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+    ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
     throw new OngekiNetError(errCode, errDescription);
   }
   handleRateLimitResponse(html) {
@@ -166,22 +166,22 @@ var OngekiNetClient = class {
     const errCodeElem = errorElems[0];
     const errCode = errCodeElem?.textContent ? Number(errCodeElem.textContent.split(": ")[1]) : -1;
     const errDescription = errorElems.length > 1 && errorElems[1].textContent ? errorElems[1].textContent : "Account has no subscription (https://gw.sega.jp/gateway/login/?product_name=ongeki).";
-    StatusDisplay.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+    ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
     throw new OngekiNetError(errCode, errDescription);
   }
 };
 
-// src/ongeki-importer/api/KamaitachiClient.ts
+// src/ongeki-importer/api/kamaitachi-client.ts
 var KamaitachiClient = class {
   static async submitScores(options) {
     const { scores: newScores = [] } = options;
     const scores = JSON.parse(
-      PreferenceManager.getScores()
+      Preference.getScores()
     );
     scores.push(...newScores);
-    PreferenceManager.setScores(JSON.stringify(scores));
+    Preference.setScores(JSON.stringify(scores));
     if (scores.length === 0) {
-      StatusDisplay.update("Nothing to import.");
+      ImportStatus.update("Nothing to import.");
       return;
     }
     const body = {
@@ -208,51 +208,51 @@ var KamaitachiClient = class {
     }
     const jsonBody = JSON.stringify(body);
     document.querySelector("#kt-import-button")?.remove();
-    StatusDisplay.update("Submitting scores...");
+    ImportStatus.update("Submitting scores...");
     let resp;
     try {
       resp = await fetch(`${KT_BASE_URL}/ir/direct-manual/import`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${PreferenceManager.getApiKey()}`,
+          authorization: `Bearer ${Preference.getApiKey()}`,
           "content-type": "application/json",
           "x-user-intent": "true"
         },
         body: jsonBody
       }).then((r) => r.json());
     } catch (e) {
-      StatusDisplay.update(
+      ImportStatus.update(
         `Could not submit scores to Kamaitachi: ${e}
 Your scores are saved in browser storage and will be submitted next import.`
       );
       return;
     }
-    PreferenceManager.setScores("[]");
-    PreferenceManager.setClasses("{}");
+    Preference.setScores("[]");
+    Preference.setClasses("{}");
     if (!resp.success) {
-      StatusDisplay.update(
+      ImportStatus.update(
         `Could not submit scores to Kamaitachi: ${resp.description}`
       );
       return;
     }
     const pollUrl = resp.body.url;
-    StatusDisplay.update("Importing scores...");
+    ImportStatus.update("Importing scores...");
     await this.pollStatus(pollUrl, options);
   }
   static async pollStatus(pollUrl, importOptions) {
     const body = await fetch(pollUrl, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${PreferenceManager.getApiKey()}`
+        Authorization: `Bearer ${Preference.getApiKey()}`
       }
     }).then((r) => r.json());
     if (!body.success) {
-      StatusDisplay.update(`Terminal error: ${body.description}`);
+      ImportStatus.update(`Terminal error: ${body.description}`);
       return;
     }
     if (body.body.importStatus === "ongoing") {
       const progress = typeof body.body.progress === "number" ? body.body.progress.toString() : body.body.progress.description;
-      StatusDisplay.update(
+      ImportStatus.update(
         `Importing scores... ${body.description} Progress: ${progress}`
       );
       setTimeout(() => this.pollStatus(pollUrl, importOptions), 1e3);
@@ -266,11 +266,11 @@ Your scores are saved in browser storage and will be submitted next import.`
         console.error(`${error.type}: ${error.message}`);
       }
     }
-    StatusDisplay.update(message);
+    ImportStatus.update(message);
   }
 };
 
-// src/ongeki-importer/parsing/DifficultyExtractor.ts
+// src/ongeki-importer/parsing/utils/difficulty-extractor.ts
 var DifficultyExtractor = class {
   static extractFromImage(row, selector) {
     const src = row.querySelector(selector)?.src;
@@ -291,7 +291,7 @@ var DifficultyExtractor = class {
   }
 };
 
-// src/ongeki-importer/parsing/LampCalculator.ts
+// src/ongeki-importer/parsing/utils/lamp-calculator.ts
 var LampCalculator = class {
   static calculate(lampImages, isPB = false) {
     let noteLamp = "CLEAR";
@@ -316,7 +316,7 @@ var LampCalculator = class {
   }
 };
 
-// src/ongeki-importer/utils/DateParser.ts
+// src/ongeki-importer/utils/date-parser.ts
 var DateParser = class {
   static parse(timestamp) {
     const match = /([0-9]{4})\/([0-9]{1,2})\/([0-9]{1,2}) ([0-9]{1,2}):([0-9]{2})/u.exec(
@@ -334,13 +334,13 @@ var DateParser = class {
   }
 };
 
-// src/ongeki-importer/parsing/DupeSongConverter.ts
+// src/ongeki-importer/parsing/utils/dupe-song-handler.ts
 var DUPE_SONGS = [
   "Singularity",
   "Perfect Shining!!",
   "Hand in Hand"
 ];
-var DupeSongConverter = class {
+var DupeSongHandler = class {
   static isDupeSong(title) {
     return DUPE_SONGS.includes(title);
   }
@@ -392,7 +392,7 @@ var DupeSongConverter = class {
   }
 };
 
-// src/ongeki-importer/parsing/ScoreParser.ts
+// src/ongeki-importer/parsing/score-parser.ts
 var ScoreParser = class {
   static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
   static parseRecentScore(element, isDetailPage = false) {
@@ -406,8 +406,8 @@ var ScoreParser = class {
       );
     }
     let matchType = "songTitle";
-    if (DupeSongConverter.isDupeSong(identifier)) {
-      identifier = DupeSongConverter.convertTitleToTachiID(identifier, element);
+    if (DupeSongHandler.isDupeSong(identifier)) {
+      identifier = DupeSongHandler.convertTitleToTachiID(identifier, element);
       matchType = "tachiSongID";
     }
     const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
@@ -471,14 +471,14 @@ var ScoreParser = class {
       );
     }
     let matchType = "songTitle";
-    if (DupeSongConverter.isDupeSong(identifier)) {
+    if (DupeSongHandler.isDupeSong(identifier)) {
       const detailDocument = new DOMParser().parseFromString(
         await this.ongekiNetClient.getMusicDetail(
           element.querySelector("input[name=idx]")?.value || ""
         ).then((r) => r.text()),
         "text/html"
       );
-      identifier = DupeSongConverter.convertTitleToTachiID(identifier, detailDocument);
+      identifier = DupeSongHandler.convertTitleToTachiID(identifier, detailDocument);
       matchType = "tachiSongID";
     }
     const score = Number(
@@ -506,7 +506,7 @@ var ScoreParser = class {
   }
 };
 
-// src/ongeki-importer/ui/ScoreImporter.ts
+// src/ongeki-importer/ui-component/score-importer.ts
 var ScoreImporter = class {
   static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
   static async importRecentScores(doc = document) {
@@ -530,7 +530,7 @@ var ScoreImporter = class {
       ...doc.querySelectorAll(".m_10")
     ];
     for (let i = 0; i < scoreElems.length; i++) {
-      StatusDisplay.update(`Fetching score ${i + 1}/${scoreElems.length}...`);
+      ImportStatus.update(`Fetching score ${i + 1}/${scoreElems.length}...`);
       const e = scoreElems[i];
       if (!e) {
         console.warn(
@@ -574,7 +574,7 @@ var ScoreImporter = class {
   }
   static async *traversePersonalBests() {
     for (const [diffIdx, difficulty] of ONGEKI_DIFFICULTIES.entries()) {
-      StatusDisplay.update(`Fetching scores for ${difficulty}...`);
+      ImportStatus.update(`Fetching scores for ${difficulty}...`);
       const resp = await this.ongekiNetClient.getMusicDifficulty(diffIdx).then((r) => r.text());
       const scoreDocument = new DOMParser().parseFromString(
         resp,
@@ -593,8 +593,53 @@ var ScoreImporter = class {
   }
 };
 
-// src/ongeki-importer/ui/NavigationManager.ts
-var NavigationManager = class {
+// src/ongeki-importer/ui-component/api-key.ts
+var ApiKey = class {
+  static setupApiKey() {
+    window.open(`${KT_BASE_URL}/client-file-flow/${KT_CLIENT_ID}`);
+    const inputHtml = `
+			<div id="api-key-setup" style="background-color: #fff">
+			<form id="api-key-form">
+				<input type="text" id="api-key-form-key" placeholder="Copy API Key here"/>
+				<input type="submit" value="Save"/>
+			</form>
+			</div>
+		`;
+    document.querySelector("header")?.insertAdjacentHTML("afterend", inputHtml);
+    document.querySelector("#api-key-setup")?.addEventListener("submit", (event) => {
+      this.submitApiKey(event);
+    });
+  }
+  static async submitApiKey(event) {
+    event.preventDefault();
+    const apiKey = document.querySelector("#api-key-form-key")?.value;
+    if (!apiKey || !/^[0-9a-f]+$/gu.test(apiKey)) {
+      ImportStatus.update("Invalid API key. Expected a hexadecimal string.");
+      return;
+    }
+    try {
+      ImportStatus.update(
+        "Verifying API key. The page will automatically reload once verification is successful."
+      );
+      const resp = await fetch(`${KT_BASE_URL}/api/v1/users/me`, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`
+        }
+      }).then((r) => r.json());
+      if (!resp.success) {
+        ImportStatus.update(`Invalid API key: ${resp.description}`);
+        return;
+      }
+      Preference.setApiKey(apiKey);
+      location.reload();
+    } catch (err) {
+      ImportStatus.update(`Could not verify API key: ${err}`);
+    }
+  }
+};
+
+// src/ongeki-importer/ui-component/navigation.ts
+var Navigation = class {
   static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
   static WARNING_ID = "kt-import-pb-warning";
   static showPbImportWarning() {
@@ -618,8 +663,8 @@ var NavigationManager = class {
     ImportButton.get()?.insertAdjacentHTML("afterend", pbWarning);
   }
   static addNav() {
-    StatusDisplay.clear();
-    const hasApiKey = !!PreferenceManager.getApiKey();
+    ImportStatus.clear();
+    const hasApiKey = !!Preference.getApiKey();
     const navHtml = document.createElement("div");
     navHtml.style.cssText = `
 			color: rgb(255, 255, 255); 
@@ -644,7 +689,7 @@ var NavigationManager = class {
     const apiKeySetup = document.createElement("a");
     apiKeySetup.id = "setup-api-key-onclick";
     apiKeySetup.append(document.createTextNode(apiKeyLink));
-    apiKeySetup.onclick = () => this.setupApiKey();
+    apiKeySetup.onclick = () => ApiKey.setupApiKey();
     apiKeyParagraph.append(apiKeySetup);
     navHtml.append(apiKeyParagraph);
     if (hasApiKey) {
@@ -671,47 +716,6 @@ var NavigationManager = class {
     document.querySelectorAll(".f_0")[1]?.insertAdjacentElement("afterend", navHtml);
     navHtml.id = "kt-import-status";
   }
-  static setupApiKey() {
-    window.open(`${KT_BASE_URL}/client-file-flow/${KT_CLIENT_ID}`);
-    const inputHtml = `
-			<div id="api-key-setup" style="background-color: #fff">
-			<form id="api-key-form">
-				<input type="text" id="api-key-form-key" placeholder="Copy API Key here"/>
-				<input type="submit" value="Save"/>
-			</form>
-			</div>
-		`;
-    document.querySelector("header")?.insertAdjacentHTML("afterend", inputHtml);
-    document.querySelector("#api-key-setup")?.addEventListener("submit", (event) => {
-      this.submitApiKey(event);
-    });
-  }
-  static async submitApiKey(event) {
-    event.preventDefault();
-    const apiKey = document.querySelector("#api-key-form-key")?.value;
-    if (!apiKey || !/^[0-9a-f]+$/gu.test(apiKey)) {
-      StatusDisplay.update("Invalid API key. Expected a hexadecimal string.");
-      return;
-    }
-    try {
-      StatusDisplay.update(
-        "Verifying API key. The page will automatically reload once verification is successful."
-      );
-      const resp = await fetch(`${KT_BASE_URL}/api/v1/users/me`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`
-        }
-      }).then((r) => r.json());
-      if (!resp.success) {
-        StatusDisplay.update(`Invalid API key: ${resp.description}`);
-        return;
-      }
-      PreferenceManager.setApiKey(apiKey);
-      location.reload();
-    } catch (err) {
-      StatusDisplay.update(`Could not verify API key: ${err}`);
-    }
-  }
 };
 
 // src/ongeki-importer/index.user.ts
@@ -724,7 +728,7 @@ switch (pathname) {
   case "/ongeki-mobile/record/musicRank":
   case "/ongeki-mobile/record/musicLevel": {
     ImportButton.create("IMPORT ALL PBs", () => {
-      NavigationManager.showPbImportWarning();
+      Navigation.showPbImportWarning();
     });
     break;
   }
@@ -735,6 +739,6 @@ switch (pathname) {
     break;
   }
   case "/ongeki-mobile/home":
-    NavigationManager.addNav();
+    Navigation.addNav();
     break;
 }

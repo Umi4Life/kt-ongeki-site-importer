@@ -1,11 +1,12 @@
-import { ImportButton } from "./ImportButton";
-import { StatusDisplay } from "./StatusDisplay";
-import { KT_BASE_URL, KT_CLIENT_ID, ONGEKI_NET_BASE_URL } from "../utils/Constants";
-import { PreferenceManager } from "../utils/PreferenceManager";
-import { OngekiNetClient } from "../api/OngekiNetClient";
-import { ScoreImporter } from "./ScoreImporter";
+import { ImportButton } from "./widgets/import-button";
+import { ImportStatus } from "./widgets/import-status";
+import { ONGEKI_NET_BASE_URL } from "../utils/constants";
+import { Preference } from "./utils/preference";
+import { OngekiNetClient } from "../api/ongeki-net-client";
+import { ScoreImporter } from "./score-importer";
+import { ApiKey } from "./api-key";
 
-export class NavigationManager {
+export class Navigation {
 	private static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
 	private static readonly WARNING_ID = "kt-import-pb-warning";
 
@@ -36,9 +37,9 @@ export class NavigationManager {
 	}
 
 	static addNav(): void {
-		StatusDisplay.clear();
+		ImportStatus.clear();
 
-		const hasApiKey = !!PreferenceManager.getApiKey();
+		const hasApiKey = !!Preference.getApiKey();
 		const navHtml = document.createElement("div");
 		navHtml.style.cssText = `
 			color: rgb(255, 255, 255); 
@@ -66,7 +67,7 @@ export class NavigationManager {
 		const apiKeySetup = document.createElement("a");
 		apiKeySetup.id = "setup-api-key-onclick";
 		apiKeySetup.append(document.createTextNode(apiKeyLink));
-		apiKeySetup.onclick = () => this.setupApiKey();
+		apiKeySetup.onclick = () => ApiKey.setupApiKey();
 		apiKeyParagraph.append(apiKeySetup);
 		navHtml.append(apiKeyParagraph);
 
@@ -97,56 +98,5 @@ export class NavigationManager {
 
 		document.querySelectorAll(".f_0")[1]?.insertAdjacentElement("afterend", navHtml);
 		navHtml.id = "kt-import-status";
-	}
-
-	private static setupApiKey(): void {
-		window.open(`${KT_BASE_URL}/client-file-flow/${KT_CLIENT_ID}`);
-		const inputHtml = `
-			<div id="api-key-setup" style="background-color: #fff">
-			<form id="api-key-form">
-				<input type="text" id="api-key-form-key" placeholder="Copy API Key here"/>
-				<input type="submit" value="Save"/>
-			</form>
-			</div>
-		`;
-		document.querySelector("header")?.insertAdjacentHTML("afterend", inputHtml);
-
-		document.querySelector("#api-key-setup")?.addEventListener("submit", (event: Event) => {
-			this.submitApiKey(event);
-		});
-	}
-
-	private static async submitApiKey(event: Event): Promise<void> {
-		event.preventDefault();
-
-		const apiKey = (document.querySelector("#api-key-form-key") as HTMLInputElement | null)
-			?.value;
-
-		if (!apiKey || !/^[0-9a-f]+$/gu.test(apiKey)) {
-			StatusDisplay.update("Invalid API key. Expected a hexadecimal string.");
-			return;
-		}
-
-		try {
-			StatusDisplay.update(
-				"Verifying API key. The page will automatically reload once verification is successful.",
-			);
-
-			const resp = await fetch(`${KT_BASE_URL}/api/v1/users/me`, {
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-				},
-			}).then((r) => r.json());
-
-			if (!resp.success) {
-				StatusDisplay.update(`Invalid API key: ${resp.description}`);
-				return;
-			}
-
-			PreferenceManager.setApiKey(apiKey);
-			location.reload();
-		} catch (err) {
-			StatusDisplay.update(`Could not verify API key: ${err}`);
-		}
 	}
 }

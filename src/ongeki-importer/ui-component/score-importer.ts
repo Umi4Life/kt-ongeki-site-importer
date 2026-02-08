@@ -1,8 +1,8 @@
-import { ONGEKI_NET_BASE_URL, ONGEKI_DIFFICULTIES } from "../utils/Constants";
-import { OngekiNetClient } from "../api/OngekiNetClient";
-import { KamaitachiClient } from "../api/KamaitachiClient";
-import { StatusDisplay } from "./StatusDisplay";
-import { ScoreParser } from "../parsing/ScoreParser";
+import { ONGEKI_NET_BASE_URL, ONGEKI_DIFFICULTIES } from "../utils/constants";
+import { OngekiNetClient } from "../api/ongeki-net-client";
+import { KamaitachiClient } from "../api/kamaitachi-client";
+import { ImportStatus } from "./widgets/import-status";
+import { ScoreParser } from "../parsing/score-parser";
 import { BatchManualScore, OngekiDifficulty } from "../models/types";
 
 export class ScoreImporter {
@@ -32,7 +32,7 @@ export class ScoreImporter {
 		];
 
 		for (let i = 0; i < scoreElems.length; i++) {
-			StatusDisplay.update(`Fetching score ${i + 1}/${scoreElems.length}...`);
+			ImportStatus.update(`Fetching score ${i + 1}/${scoreElems.length}...`);
 
 			const e = scoreElems[i];
 
@@ -86,7 +86,7 @@ export class ScoreImporter {
 
 	private static async *traversePersonalBests(): AsyncGenerator<BatchManualScore> {
 		for (const [diffIdx, difficulty] of ONGEKI_DIFFICULTIES.entries()) {
-			StatusDisplay.update(`Fetching scores for ${difficulty}...`);
+			ImportStatus.update(`Fetching scores for ${difficulty}...`);
 			// Not trying to DDOS ONGEKI-NET.
 			const resp = await this.ongekiNetClient
 				.getMusicDifficulty(diffIdx)

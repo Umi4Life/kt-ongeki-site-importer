@@ -1,5 +1,5 @@
 import { OngekiNetError } from "../models/errors";
-import { StatusDisplay } from "../ui/StatusDisplay";
+import { ImportStatus } from "../ui-component/widgets/import-status";
 
 export class OngekiNetClient {
 	private domParser: DOMParser;
@@ -34,7 +34,7 @@ export class OngekiNetClient {
 		const respUrl = new URL(resp.url);
 
 		if (resp.status === 503) {
-			StatusDisplay.update("ONGEKI.NET is currently under maintenance. Please try again later.");
+			ImportStatus.update("ONGEKI.NET is currently under maintenance. Please try again later.");
 			throw new Error("ONGEKI.NET is under maintenance");
 		}
 
@@ -63,7 +63,7 @@ export class OngekiNetClient {
 				? errorElems[1]!.textContent
 				: "An unknown error occurred.";
 
-		StatusDisplay.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+		ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
 		throw new OngekiNetError(errCode, errDescription);
 	}
 
@@ -79,7 +79,7 @@ export class OngekiNetClient {
 				? errorElems[1]!.textContent
 				: "Account has no subscription (https://gw.sega.jp/gateway/login/?product_name=ongeki).";
 
-		StatusDisplay.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+		ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
 		throw new OngekiNetError(errCode, errDescription);
 	}
 }

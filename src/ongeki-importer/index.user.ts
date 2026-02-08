@@ -1,6 +1,6 @@
-import { ImportButton } from "./ui/ImportButton";
-import { NavigationManager } from "./ui/NavigationManager";
-import { ScoreImporter } from "./ui/ScoreImporter";
+import { ImportButton } from "./ui-component/widgets/import-button";
+import { Navigation } from "./ui-component/navigation";
+import { ScoreImporter } from "./ui-component/score-importer";
 
 console.log("kt-ongeki-site-importer loaded");
 console.log("running ongeki import script on ", location.href);
@@ -13,7 +13,7 @@ switch (pathname) {
 	case "/ongeki-mobile/record/musicRank":
 	case "/ongeki-mobile/record/musicLevel": {
 		ImportButton.create("IMPORT ALL PBs", () => {
-			NavigationManager.showPbImportWarning();
+			Navigation.showPbImportWarning();
 		});
 		break;
 	}
@@ -24,6 +24,6 @@ switch (pathname) {
 		break;
 	}
 	case "/ongeki-mobile/home":
-		NavigationManager.addNav();
+		Navigation.addNav();
 		break;
 }
