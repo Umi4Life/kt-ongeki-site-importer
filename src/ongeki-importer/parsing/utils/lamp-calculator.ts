@@ -15,13 +15,11 @@ export class LampCalculator {
 
 		if (lampImages.some((i) => i.includes("fb.png"))) {
 			bellLamp = "FULL BELL";
-		}
-
-		if (lampImages.some((i) => i.includes("lose.png"))) {
+		} else if (isPB && lampImages[0]?.includes("music_icon_back.png")) {
 			noteLamp = "LOSS";
 		}
 
-		if (isPB && lampImages[0]?.includes("music_icon_back.png")) {
+		if (lampImages.some((i) => i.includes("lose.png"))) {
 			noteLamp = "LOSS";
 		}
 
