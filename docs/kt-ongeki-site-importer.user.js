@@ -64,6 +64,7 @@ var KT_CONFIGS = {
 var KT_BASE_URL = KT_CONFIGS[KT_SELECTED_CONFIG].baseUrl;
 var KT_CLIENT_ID = KT_CONFIGS[KT_SELECTED_CONFIG].clientId;
 var ONGEKI_NET_BASE_URL = "https://ongeki-net.com/ongeki-mobile/";
+var ONGEKI_NET_REQUEST_DELAY_MS = 500;
 var __DEV__ = false;
 var ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"];
 
@@ -114,6 +115,9 @@ var ParseError = class extends Error {
 };
 
 // src/ongeki-importer/api/ongeki-net-client.ts
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 var OngekiNetClient = class {
   constructor(baseUrl) {
     this.baseUrl = baseUrl;
@@ -136,6 +140,7 @@ var OngekiNetClient = class {
     return this.request(`/record/musicDetail/?idx=${encodeURIComponent(idx)}`);
   }
   async request(path, init) {
+    await sleep(ONGEKI_NET_REQUEST_DELAY_MS);
     const url = `${this.baseUrl}${path}`;
     const resp = await fetch(url, init);
     const respUrl = new URL(resp.url);
@@ -305,11 +310,10 @@ var LampCalculator = class {
     }
     if (lampImages.some((i) => i.includes("fb.png"))) {
       bellLamp = "FULL BELL";
-    }
-    if (lampImages.some((i) => i.includes("lose.png"))) {
+    } else if (isPB && lampImages[0]?.includes("music_icon_back.png")) {
       noteLamp = "LOSS";
     }
-    if (isPB && lampImages[0]?.includes("music_icon_back.png")) {
+    if (lampImages.some((i) => i.includes("lose.png"))) {
       noteLamp = "LOSS";
     }
     return { noteLamp, bellLamp };

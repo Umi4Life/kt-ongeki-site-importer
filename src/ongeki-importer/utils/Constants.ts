@@ -12,6 +12,8 @@ export const API_KEY = "api-key";
 
 export const ONGEKI_NET_BASE_URL = "https://ongeki-net.com/ongeki-mobile/";
 
+export const ONGEKI_NET_REQUEST_DELAY_MS = 500;
+
 export const __DEV__ = false;
 
 export const ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"] as const;

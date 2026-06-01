@@ -1,5 +1,10 @@
 import { OngekiNetError } from "../models/errors";
 import { ImportStatus } from "../ui-component/widgets/import-status";
+import { ONGEKI_NET_REQUEST_DELAY_MS } from "../utils/constants";
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export class OngekiNetClient {
 	private domParser: DOMParser;
@@ -29,6 +34,7 @@ export class OngekiNetClient {
 	}
 
 	private async request(path: string, init?: RequestInit): Promise<Response> {
+		await sleep(ONGEKI_NET_REQUEST_DELAY_MS);
 		const url = `${this.baseUrl}${path}`;
 		const resp = await fetch(url, init);
 		const respUrl = new URL(resp.url);
