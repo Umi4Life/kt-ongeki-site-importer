@@ -69,8 +69,6 @@ For me to reproduce errors better:
 2. Open a **[new issue](https://github.com/Umi4Life/kt-ongeki-site-importer/issues/new)**.
 3. Paste your **console log** and **steps to reproduce**, and attach the **HTML file** if you saved one.
 
-A clear title helps, for example: `Import recent scores fails with Parse error`.
-
 ## Development
 
 1. Edit files in `src/ongeki-importer`
