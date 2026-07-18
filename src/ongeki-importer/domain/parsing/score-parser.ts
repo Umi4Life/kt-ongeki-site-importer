@@ -55,7 +55,10 @@ export class ScoreParser {
 			...element.querySelectorAll<HTMLImageElement>(".clearfix.p_t_5.t_l.f_0 img"),
 		].map((e) => e.src);
 
-		const lamps = LampCalculator.calculate(lampImages);
+		const lamps = LampCalculator.calculate(lampImages, {
+			mode: "playlog",
+			score,
+		});
 
 		const scoreData: BatchManualScore = {
 			score,
@@ -122,7 +125,10 @@ export class ScoreParser {
 			),
 		].map((e) => e.src);
 
-		const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages);
+		const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages, {
+			mode: "pb",
+			score,
+		});
 
 		const platinumScore = Number(
 			element

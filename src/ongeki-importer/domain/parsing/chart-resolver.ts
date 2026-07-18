@@ -69,7 +69,8 @@ export class ChartResolver {
 			return {
 				identifier: remasterId,
 				matchType: "inGameID",
-				difficulty: "Re:MASTER",
+				// Tachi stores these as Re:MASTER but requires LUNATIC in import payloads.
+				difficulty: "LUNATIC",
 			};
 		}
 
@@ -77,7 +78,7 @@ export class ChartResolver {
 			return {
 				identifier: title,
 				matchType: "songTitle",
-				difficulty: "Re:MASTER",
+				difficulty: "LUNATIC",
 			};
 		}
 
@@ -157,7 +158,7 @@ export class ChartResolver {
 			return {
 				identifier: "8091",
 				matchType: "inGameID",
-				difficulty: "Re:MASTER",
+				difficulty: "LUNATIC",
 			};
 		}
 

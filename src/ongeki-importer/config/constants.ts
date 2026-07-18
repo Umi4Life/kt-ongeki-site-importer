@@ -17,3 +17,6 @@ export const ONGEKI_NET_REQUEST_DELAY_MS = 500;
 export const __DEV__ = false;
 
 export const ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"] as const;
+
+/** Technical rank S threshold; used as a LOSS fallback when ONGEKI NET icons are inconclusive. */
+export const ONGEKI_TECHNICAL_RANK_S_THRESHOLD = 970_000;

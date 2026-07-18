@@ -134,6 +134,6 @@ src/ongeki-importer/
 
 ### Known limitations
 
-- **ブツメツビーターズ** Re:MASTER is the only white chart without a Tachi `inGameID`; it is matched via `songTitle` + `Re:MASTER` instead.
+- **ブツメツビーターズ** Re:MASTER is the only white chart without a Tachi `inGameID`; it is matched via `songTitle` and submitted as `LUNATIC` per Tachi's import rules.
 - Tachi chart lookups refresh automatically on `master` via CI; new white-chart / Re:MASTER entries are picked up without a manual release step.
 

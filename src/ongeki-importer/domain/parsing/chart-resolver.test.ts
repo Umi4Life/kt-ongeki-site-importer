@@ -8,19 +8,19 @@ function parseHtml(html: string): HTMLElement {
 }
 
 describe("ChartResolver.resolveChart", () => {
-	it("maps Re:MASTER white charts with inGameID", () => {
+	it("maps Re:MASTER white charts with inGameID as LUNATIC for Tachi import", () => {
 		expect(ChartResolver.resolveChart("WakeUP MakeUP FEVER!", "LUNATIC")).toEqual({
 			identifier: "8187",
 			matchType: "inGameID",
-			difficulty: "Re:MASTER",
+			difficulty: "LUNATIC",
 		});
 	});
 
-	it("maps ブツメツビーターズ via songTitle + Re:MASTER when inGameID is null", () => {
+	it("maps ブツメツビーターズ via songTitle when inGameID is null", () => {
 		expect(ChartResolver.resolveChart("ブツメツビーターズ", "LUNATIC")).toEqual({
 			identifier: "ブツメツビーターズ",
 			matchType: "songTitle",
-			difficulty: "Re:MASTER",
+			difficulty: "LUNATIC",
 		});
 	});
 
@@ -74,7 +74,7 @@ describe("ChartResolver.resolveChart", () => {
 		});
 	});
 
-	it("disambiguates Perfect Shining Re:MASTER chart", () => {
+	it("disambiguates Perfect Shining white chart as LUNATIC for Tachi import", () => {
 		const doc = parseHtml(`<div>星咲 あかり Lv.39</div>`);
 
 		expect(
@@ -82,7 +82,7 @@ describe("ChartResolver.resolveChart", () => {
 		).toEqual({
 			identifier: "8091",
 			matchType: "inGameID",
-			difficulty: "Re:MASTER",
+			difficulty: "LUNATIC",
 		});
 	});
 

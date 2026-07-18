@@ -29,6 +29,7 @@ var ONGEKI_NET_BASE_URL = "https://ongeki-net.com/ongeki-mobile/";
 var ONGEKI_NET_REQUEST_DELAY_MS = 500;
 var __DEV__ = false;
 var ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"];
+var ONGEKI_TECHNICAL_RANK_S_THRESHOLD = 97e4;
 
 // src/ongeki-importer/infrastructure/kamaitachi-client.ts
 var KamaitachiClient = class {
@@ -36,6 +37,8 @@ var KamaitachiClient = class {
     this.storage = storage;
     this.status = status;
   }
+  storage;
+  status;
   async submitScores(options) {
     const { scores: newScores = [] } = options;
     const scores = JSON.parse(this.storage.getScores());
@@ -138,12 +141,15 @@ var OngekiNetError = class extends Error {
     this.errCode = errCode;
     this.errDescription = errDescription;
   }
+  errCode;
+  errDescription;
 };
 var ParseError = class extends Error {
   constructor(context, message) {
     super(`Parse error in ${context}: ${message}`);
     this.context = context;
   }
+  context;
 };
 
 // src/ongeki-importer/infrastructure/ongeki-net-client.ts
@@ -159,6 +165,8 @@ var OngekiNetClient = class {
       this.baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
   }
+  baseUrl;
+  status;
   domParser;
   async getPlaylog() {
     return this.request("/record/playlog/");
@@ -291,23 +299,32 @@ var DifficultyExtractor = class {
 
 // src/ongeki-importer/domain/parsing/lamp-calculator.ts
 var LampCalculator = class {
-  static calculate(lampImages, isPB = false) {
-    let noteLamp = "CLEAR";
+  static calculate(lampImages, options) {
+    const bellSlot = options.mode === "pb" ? 2 : 1;
+    const comboSlot = options.mode === "pb" ? 3 : 2;
     let bellLamp = "NONE";
-    if (lampImages.some((i) => i.includes("abplus.png"))) {
+    let noteLamp = "CLEAR";
+    const bellImage = lampImages[bellSlot] ?? "";
+    const comboImage = lampImages[comboSlot] ?? "";
+    if (bellImage.includes("fb.png")) {
+      bellLamp = "FULL BELL";
+    }
+    if (comboImage.includes("abplus.png")) {
       noteLamp = "ALL BREAK+";
-    } else if (lampImages.some((i) => i.includes("ab.png"))) {
+    } else if (comboImage.includes("ab.png")) {
       noteLamp = "ALL BREAK";
-    } else if (lampImages.some((i) => i.includes("fc.png"))) {
+    } else if (comboImage.includes("fc.png")) {
       noteLamp = "FULL COMBO";
     }
-    if (lampImages.some((i) => i.includes("fb.png"))) {
-      bellLamp = "FULL BELL";
-    } else if (isPB && lampImages[0]?.includes("music_icon_back.png")) {
-      noteLamp = "LOSS";
+    const hasPerformanceLamp = bellLamp === "FULL BELL" || noteLamp === "FULL COMBO" || noteLamp === "ALL BREAK" || noteLamp === "ALL BREAK+";
+    if (!hasPerformanceLamp) {
+      const explicitLoss = lampImages.some((image) => image.includes("lose.png")) || options.mode === "pb" && lampImages[0]?.includes("music_icon_back.png") === true || options.mode === "playlog" && lampImages[0]?.includes("base.png") === true;
+      if (explicitLoss || options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+        noteLamp = "LOSS";
+      }
     }
-    if (lampImages.some((i) => i.includes("lose.png"))) {
-      noteLamp = "LOSS";
+    if (bellLamp === "FULL BELL" && noteLamp === "LOSS") {
+      noteLamp = "CLEAR";
     }
     return { noteLamp, bellLamp };
   }
@@ -479,14 +496,15 @@ var ChartResolver = class _ChartResolver {
       return {
         identifier: remasterId,
         matchType: "inGameID",
-        difficulty: "Re:MASTER"
+        // Tachi stores these as Re:MASTER but requires LUNATIC in import payloads.
+        difficulty: "LUNATIC"
       };
     }
     if (REMASTER_SONG_TITLE_ONLY_SET.has(title)) {
       return {
         identifier: title,
         matchType: "songTitle",
-        difficulty: "Re:MASTER"
+        difficulty: "LUNATIC"
       };
     }
     const lunaticId = LUNATIC_BY_TITLE[title];
@@ -549,7 +567,7 @@ var ChartResolver = class _ChartResolver {
       return {
         identifier: "8091",
         matchType: "inGameID",
-        difficulty: "Re:MASTER"
+        difficulty: "LUNATIC"
       };
     }
     throw new ParseError(
@@ -627,7 +645,10 @@ var ScoreParser = class {
     const lampImages = [
       ...element.querySelectorAll(".clearfix.p_t_5.t_l.f_0 img")
     ].map((e) => e.src);
-    const lamps = LampCalculator.calculate(lampImages);
+    const lamps = LampCalculator.calculate(lampImages, {
+      mode: "playlog",
+      score
+    });
     const scoreData = {
       score,
       platinumScore: 0,
@@ -675,7 +696,10 @@ var ScoreParser = class {
         ".music_score_icon_area.t_r.f_0 img"
       )
     ].map((e) => e.src);
-    const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages);
+    const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages, {
+      mode: "pb",
+      score
+    });
     const platinumScore = Number(
       element.querySelector(`.t_r.platinum_high_score_text_block`)?.textContent.split("/")[0].trim().replace(/,/g, "")
     );

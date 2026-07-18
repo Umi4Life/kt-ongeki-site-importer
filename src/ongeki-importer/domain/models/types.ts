@@ -87,5 +87,4 @@ export type OngekiDifficulty =
 	| "ADVANCED"
 	| "EXPERT"
 	| "MASTER"
-	| "LUNATIC"
-	| "Re:MASTER";
+	| "LUNATIC";
