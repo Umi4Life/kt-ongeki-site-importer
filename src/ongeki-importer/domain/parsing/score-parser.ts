@@ -1,30 +1,45 @@
-import { BatchManualScore, OngekiDifficulty } from "../models/types";
+import { BatchManualScore, OngekiDifficulty, OngekiMatchType } from "../models/types";
 import { DifficultyExtractor } from "./difficulty-extractor";
 import { LampCalculator } from "./lamp-calculator";
 import { DateParser } from "./date-parser";
 import { ParseError } from "../models/errors";
-import { DupeSongHandler } from "./dupe-song-handler";
+import { ChartResolver } from "./chart-resolver";
 
 export class ScoreParser {
 	static parseRecentScore(element: HTMLElement | Document): BatchManualScore {
-		let identifier = element.querySelector<HTMLDivElement>(
+		const title = element.querySelector<HTMLDivElement>(
 			".m_5.l_h_10.break",
 		)?.innerText.trim();
 
-		if (!identifier) {
+		if (!title) {
 			throw new ParseError(
 				"ScoreParser.parseRecentScore",
 				"Recent score card does not contain an identifier.",
 			);
 		}
 
-		let matchType = "songTitle";
-		if (DupeSongHandler.isDupeSong(identifier)) {
-			identifier = DupeSongHandler.convertTitleToTachiID(identifier, element);
-			matchType = "tachiSongID";
+		const pageDifficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
+		let chartMatch;
+		try {
+			chartMatch = ChartResolver.resolveChart(title, pageDifficulty, element);
+		} catch (error) {
+			if (
+				error instanceof ParseError &&
+				ChartResolver.needsDetail(title)
+			) {
+				chartMatch = {
+					identifier: title,
+					matchType: "songTitle" as const,
+					difficulty: pageDifficulty,
+				};
+			} else {
+				throw error;
+			}
 		}
 
-		const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
+		const identifier = chartMatch.identifier;
+		const matchType = chartMatch.matchType;
+		const difficulty = chartMatch.difficulty;
 
 		const timestamp = element.querySelector<HTMLElement>(
 			".f_r.f_12.h_10",
@@ -92,7 +107,8 @@ export class ScoreParser {
 		element: HTMLElement | Document,
 		difficulty: OngekiDifficulty,
 		identifier: string,
-		matchType: string,
+		matchType: OngekiMatchType,
+		submitDifficulty: OngekiDifficulty = difficulty,
 	): BatchManualScore {
 		const score = Number(
 			[...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
@@ -123,7 +139,7 @@ export class ScoreParser {
 			bellLamp,
 			matchType,
 			identifier,
-			difficulty,
+			difficulty: submitDifficulty,
 		};
 	}
 

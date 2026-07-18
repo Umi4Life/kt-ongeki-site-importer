@@ -1,6 +1,6 @@
 import { AppContext } from "../../app/context";
 import { BatchManualScore, OngekiDifficulty } from "../../domain/models/types";
-import { DupeSongHandler } from "../../domain/parsing/dupe-song-handler";
+import { ChartResolver } from "../../domain/parsing/chart-resolver";
 import { ScoreParser } from "../../domain/parsing/score-parser";
 import { ONGEKI_DIFFICULTIES } from "../../config/constants";
 
@@ -23,11 +23,12 @@ export async function* collectPersonalBests(
 				continue;
 			}
 
-			let identifier = ScoreParser.extractPersonalBestTitle(e);
-			let matchType = "songTitle";
+			const title = ScoreParser.extractPersonalBestTitle(e);
+			const pageDifficulty = difficulty as OngekiDifficulty;
+			let detailDocument: Document | undefined;
 
-			if (DupeSongHandler.isDupeSong(identifier)) {
-				const detailDocument = new DOMParser().parseFromString(
+			if (ChartResolver.needsDetail(title)) {
+				detailDocument = new DOMParser().parseFromString(
 					await ctx.ongekiNet
 						.getMusicDetail(
 							e.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
@@ -35,15 +36,20 @@ export async function* collectPersonalBests(
 						.then((r) => r.text()),
 					"text/html",
 				);
-				identifier = DupeSongHandler.convertTitleToTachiID(identifier, detailDocument);
-				matchType = "tachiSongID";
 			}
+
+			const chartMatch = ChartResolver.resolveChart(
+				title,
+				pageDifficulty,
+				detailDocument,
+			);
 
 			yield ScoreParser.parsePersonalBestScore(
 				e,
-				difficulty as OngekiDifficulty,
-				identifier,
-				matchType,
+				pageDifficulty,
+				chartMatch.identifier,
+				chartMatch.matchType,
+				chartMatch.difficulty,
 			);
 		}
 	}

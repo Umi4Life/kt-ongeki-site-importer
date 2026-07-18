@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run generate:lookups
+      - name: Verify committed lookups match Tachi seeds
+        if: github.event_name == 'pull_request'
+        run: npm run verify:lookups
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Commit refreshed lookups and bundle
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ongeki-importer/config/tachi-chart-lookups.ts docs/
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: refresh Tachi chart lookups"
+          git push

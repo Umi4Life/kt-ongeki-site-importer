@@ -80,6 +80,7 @@ For me to reproduce errors better:
 
 ```bash
 npm install
+npm run generate:lookups   # refresh Tachi chart ID maps (also runs before build)
 npm run build
 ```
 
@@ -98,10 +99,16 @@ Source lives under `src/ongeki-importer/`. The project uses [bundlemonkey](https
 
 | Command | Purpose |
 | --- | --- |
+| `npm run generate:lookups` | Regenerate Tachi `inGameID` maps from [zkldi/Tachi](https://github.com/zkldi/Tachi) seeds |
+| `npm run verify:lookups` | Regenerate lookups and fail if `tachi-chart-lookups.ts` would change (run before opening a PR) |
+| `npm test` | Run unit tests |
+| `npm run test:watch` | Run unit tests in watch mode |
 | `npm run build` | Production bundle to `docs/` |
 | `npm run watch` | Rebuild on save and copy output to clipboard |
 | `npm run watch:remote` | Rebuild on save using a one-time stub that `@require`s `.dev/` output |
 | `npm run typecheck` | Run `tsc --noEmit` |
+
+CI runs `generate:lookups`, `test`, `typecheck`, and `build` on every push and pull request to `master` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)). On `master`, CI also commits refreshed lookups and the rebuilt `docs/` bundle when Tachi seeds change (weekly schedule, manual **Run workflow**, or any push). Pull requests must pass `verify:lookups` so committed lookups stay in sync. The only external dependency for refresh is the public Tachi seed JSON; commits use the built-in `github-actions[bot]` token.
 
 **Recommended workflow**
 
@@ -122,6 +129,11 @@ src/ongeki-importer/
   domain/             # types, errors, pure parsers
   infrastructure/     # HTTP clients, local storage
   ui/                 # DOM widgets
-  config/             # constants
+  config/             # constants, generated Tachi chart lookups
 ```
+
+### Known limitations
+
+- **ブツメツビーターズ** Re:MASTER is the only white chart without a Tachi `inGameID`; it is matched via `songTitle` + `Re:MASTER` instead.
+- Tachi chart lookups refresh automatically on `master` via CI; new white-chart / Re:MASTER entries are picked up without a manual release step.
 

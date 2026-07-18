@@ -15,9 +15,11 @@ export interface OptionalScoreData {
 	damage?: number;
 }
 
+export type OngekiMatchType = "inGameID" | "songTitle";
+
 export interface BatchManualScore {
 	identifier: string;
-	matchType: string;
+	matchType: OngekiMatchType;
 	difficulty: OngekiDifficulty;
 	score: number;
 	platinumScore?: number;
@@ -80,4 +82,10 @@ export interface LampResult {
 	bellLamp: OngekiBellLamp;
 }
 
-export type OngekiDifficulty = "BASIC" | "ADVANCED" | "EXPERT" | "MASTER" | "LUNATIC";
+export type OngekiDifficulty =
+	| "BASIC"
+	| "ADVANCED"
+	| "EXPERT"
+	| "MASTER"
+	| "LUNATIC"
+	| "Re:MASTER";

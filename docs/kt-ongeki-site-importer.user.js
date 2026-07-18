@@ -331,81 +331,292 @@ var DateParser = class {
   }
 };
 
-// src/ongeki-importer/domain/parsing/dupe-song-handler.ts
-var DUPE_SONGS = [
+// src/ongeki-importer/config/tachi-chart-lookups.ts
+var REMASTER_BY_TITLE = {
+  "AMAZING MIGHTYYYY!!!!": "8115",
+  "Destiny Runner": "8165",
+  "Dolphika": "8186",
+  "GAME IS LIFE": "8099",
+  "GODLINESS": "8107",
+  "GranFatalité": "8100",
+  "Halcyon": "8163",
+  "Here We Go": "8094",
+  "Hide & Attack": "8079",
+  "No Limit RED Force": "8061",
+  "P！P！P！P！がおー!!": "8095",
+  "Perfect Shining!!": "8091",
+  "Redo": "8063",
+  "Rule the World!!": "8102",
+  "STARRED HEART": "8064",
+  "Starring Stars": "8088",
+  "STARTLINER": "8029",
+  "SWEET SHAKE!!": "8097",
+  "Transcend Lights": "8072",
+  "UTAKATA": "8101",
+  "WakeUP MakeUP FEVER!": "8187",
+  "What color...": "8098",
+  "Zest of Blue": "8031",
+  "うまぴょい伝説": "8084",
+  "グリーンライツ・セレナーデ": "8062",
+  "シュガーソングとビターステップ": "8162",
+  "シリウスの輝きのように": "8175",
+  "シル・ヴ・プレジデント": "8167",
+  "タテマエと本心の大乱闘": "8033",
+  "どうぶつ☆パラダイス": "8103",
+  "トリドリ⇒モリモリ！Lovely fruits☆": "8105",
+  "ネ！コ！": "8050",
+  "ハッピータイフーン": "8054",
+  "ヒバナ": "8164",
+  "ブリキノダンス": "8067",
+  "まっすぐ→→→ストリーム！": "8104",
+  "みんな Happy!!": "8030",
+  "ようこそジャパリパークへ": "8022",
+  "レイル・ロマネスク ハチロクver.": "8180",
+  "ロキ": "8173",
+  "六兆年と一夜物語": "8065",
+  "最強 the サマータイム!!!!!": "8048",
+  "千本桜": "8179",
+  "君とインフィニティ -2021-": "8177",
+  "回レ！雪月花": "8058",
+  "夜明けのストリング": "8106",
+  "本能的 Survivor": "8085",
+  "永遠メモリー": "8083",
+  "私たち、四季を遊ぶんです！！": "8168",
+  "空色メモリーズ": "8170",
+  "脳漿炸裂ガール": "8166"
+};
+var REMASTER_SONG_TITLE_ONLY = [
+  "ブツメツビーターズ"
+];
+var LUNATIC_BY_TITLE = {
+  "Calamity Fortune": "8024",
+  "DIE IN": "8181",
+  "ENERGY SYNERGY MATRIX": "8185",
+  "Fly to the Leaden Sky -O.N.G.E.K.I. MIX-": "8057",
+  "Gate of Doom": "8015",
+  "LAMIA": "8139",
+  "luna blu": "8047",
+  "macrocosmos": "8060",
+  "Mare Maris": "8009",
+  "MEGALOVANIA": "8169",
+  "My First Phone": "8046",
+  "No Remorse": "8001",
+  "OBLIVION": "8182",
+  "Perfect Shining!!": "8003",
+  "Random Access Emotions": "8178",
+  "Red and Blue and Green": "8051",
+  "Sakura Fubuki": "8023",
+  "The world of spirit": "8069",
+  "Titania": "8158",
+  "YO-KAI Disco": "8082",
+  "Ἀταραξία": "8071",
+  "μ3": "8145",
+  "あ・り・ま・す・か？": "8081",
+  "ウサテイ": "8086",
+  "エピクロスの虹はもう見えない": "8052",
+  "からくりピエロ": "8041",
+  "ジングルベル": "8043",
+  "セガNET麻雀MJ -O.N.G.E.K.I. MIX-": "8059",
+  "セガサターン起動音[H.][Remix]": "8045",
+  "どどんぱち大音頭": "8044",
+  "ナイト・オブ・ナイツ": "8002",
+  "ぼくらの16bit戦争": "8113",
+  "ロボットプラネットユートピア": "8056",
+  "わたしたち魔法乙女です☆": "8188",
+  "最終鬼畜全部声": "8080",
+  "初音ミクの激唱": "8021",
+  "別れのワルツ": "8070",
+  "天狗の落とし文 feat. ｙｔｒ": "8172",
+  "怒槌～光吉猛修一部謎～": "8025",
+  "怨撃": "8089",
+  "怨撃・真": "8090",
+  "東亞 -O.N.G.E.K.I. MIX-": "8049",
+  "緋蜂": "8042",
+  "脳天直撃": "8160",
+  "蛙石": "8087"
+};
+
+// src/ongeki-importer/domain/parsing/chart-resolver.ts
+var DETAIL_DISAMBIGUATION_TITLES = [
   "Singularity",
   "Perfect Shining!!",
   "Hand in Hand"
 ];
-var DupeSongHandler = class {
-  static isDupeSong(title) {
-    return DUPE_SONGS.includes(title);
+var SINGULARITY_JACKET_IDS = {
+  "ac5cab7a8a61d825": "391",
+  "9cc53da5e1896b30": "454",
+  "19bdf34c7aed1ee0": "516"
+};
+var REMASTER_SONG_TITLE_ONLY_SET = new Set(REMASTER_SONG_TITLE_ONLY);
+var ChartResolver = class _ChartResolver {
+  static needsDetail(title) {
+    return DETAIL_DISAMBIGUATION_TITLES.includes(
+      title
+    );
   }
-  static convertTitleToTachiID(title, doc) {
+  static resolveChart(title, pageDifficulty, detailDoc) {
+    if (_ChartResolver.needsDetail(title)) {
+      if (!detailDoc) {
+        throw new ParseError(
+          "ChartResolver.resolveChart",
+          `Detail document required to disambiguate "${title}".`
+        );
+      }
+      return _ChartResolver.resolveFromDetail(title, pageDifficulty, detailDoc);
+    }
+    if (pageDifficulty === "LUNATIC") {
+      return _ChartResolver.resolveLunaticTab(title);
+    }
+    return {
+      identifier: title,
+      matchType: "songTitle",
+      difficulty: pageDifficulty
+    };
+  }
+  static resolveLunaticTab(title) {
+    const remasterId = REMASTER_BY_TITLE[title];
+    if (remasterId) {
+      return {
+        identifier: remasterId,
+        matchType: "inGameID",
+        difficulty: "Re:MASTER"
+      };
+    }
+    if (REMASTER_SONG_TITLE_ONLY_SET.has(title)) {
+      return {
+        identifier: title,
+        matchType: "songTitle",
+        difficulty: "Re:MASTER"
+      };
+    }
+    const lunaticId = LUNATIC_BY_TITLE[title];
+    if (lunaticId) {
+      return {
+        identifier: lunaticId,
+        matchType: "inGameID",
+        difficulty: "LUNATIC"
+      };
+    }
+    return {
+      identifier: title,
+      matchType: "songTitle",
+      difficulty: "LUNATIC"
+    };
+  }
+  static resolveFromDetail(title, pageDifficulty, detailDoc) {
     switch (title) {
       case "Singularity":
-        return this.processSingularityToTachiID(doc);
+        return _ChartResolver.resolveSingularity(pageDifficulty, detailDoc);
       case "Perfect Shining!!":
-        return this.processPerfectShiningToTachiID(doc);
+        return _ChartResolver.resolvePerfectShining(pageDifficulty, detailDoc);
       case "Hand in Hand":
-        return this.processHandinHandToTachiID(doc);
-      default:
+        return _ChartResolver.resolveHandInHand(pageDifficulty, detailDoc);
+      default: {
+        const _exhaustive = title;
         throw new ParseError(
-          "DupeSongConverter.convertTitleToTachiID",
-          `Unknown dupe song title: ${title}`
+          "ChartResolver.resolveFromDetail",
+          `Unhandled detail disambiguation title: ${_exhaustive}`
         );
+      }
     }
   }
-  static processHandinHandToTachiID(_) {
-    return "337";
-  }
-  static processSingularityToTachiID(doc) {
-    const imgSrc = doc.querySelector("img.m_5.f_l")?.src;
-    switch (imgSrc) {
-      case "https://ongeki-net.com/ongeki-mobile/img/music/ac5cab7a8a61d825.png":
-        return "362";
-      case "https://ongeki-net.com/ongeki-mobile/img/music/9cc53da5e1896b30.png":
-        return "425";
-      case "https://ongeki-net.com/ongeki-mobile/img/music/19bdf34c7aed1ee0.png":
-        return "487";
-      default:
-        throw new ParseError(
-          "DupeSongConverter.processSingularityToTachiID",
-          `Unknown Singularity image source: ${imgSrc}`
-        );
+  static resolveSingularity(pageDifficulty, detailDoc) {
+    const imgSrc = detailDoc.querySelector("img.m_5.f_l")?.src;
+    const jacketId = _ChartResolver.normalizeMusicImagePath(imgSrc);
+    const inGameID = jacketId ? SINGULARITY_JACKET_IDS[jacketId] : void 0;
+    if (!inGameID) {
+      throw new ParseError(
+        "ChartResolver.resolveSingularity",
+        `Unknown Singularity image source: ${imgSrc}`
+      );
     }
+    return {
+      identifier: inGameID,
+      matchType: "inGameID",
+      difficulty: pageDifficulty
+    };
   }
-  static processPerfectShiningToTachiID(doc) {
-    if (doc.textContent?.includes("星咲 あかり Lv.1")) {
-      return "817";
-    } else if (doc.textContent?.includes("星咲 あかり Lv.39")) {
-      return "69";
+  static resolvePerfectShining(pageDifficulty, detailDoc) {
+    const text = detailDoc.textContent ?? "";
+    if (text.includes("星咲 あかり Lv.1")) {
+      return {
+        identifier: "8003",
+        matchType: "inGameID",
+        difficulty: "LUNATIC"
+      };
+    }
+    if (text.includes("星咲 あかり Lv.39")) {
+      return {
+        identifier: "8091",
+        matchType: "inGameID",
+        difficulty: "Re:MASTER"
+      };
     }
     throw new ParseError(
-      "DupeSongConverter.processPerfectShiningToTachiID",
+      "ChartResolver.resolvePerfectShining",
       "Unknown Perfect Shining!! variant."
     );
+  }
+  static resolveHandInHand(pageDifficulty, detailDoc) {
+    const text = detailDoc.textContent ?? "";
+    if (text.includes("ユーフィリア") || text.includes("アンジュ・ヴィエルジュ")) {
+      return {
+        identifier: "212",
+        matchType: "inGameID",
+        difficulty: pageDifficulty
+      };
+    }
+    if (text.includes("livetune")) {
+      return {
+        identifier: "380",
+        matchType: "inGameID",
+        difficulty: pageDifficulty
+      };
+    }
+    throw new ParseError(
+      "ChartResolver.resolveHandInHand",
+      "Unknown Hand in Hand variant."
+    );
+  }
+  static normalizeMusicImagePath(src) {
+    if (!src) {
+      return void 0;
+    }
+    const match = src.match(/\/img\/music\/([a-f0-9]+)\.png/i);
+    return match?.[1];
   }
 };
 
 // src/ongeki-importer/domain/parsing/score-parser.ts
 var ScoreParser = class {
   static parseRecentScore(element) {
-    let identifier = element.querySelector(
+    const title = element.querySelector(
       ".m_5.l_h_10.break"
     )?.innerText.trim();
-    if (!identifier) {
+    if (!title) {
       throw new ParseError(
         "ScoreParser.parseRecentScore",
         "Recent score card does not contain an identifier."
       );
     }
-    let matchType = "songTitle";
-    if (DupeSongHandler.isDupeSong(identifier)) {
-      identifier = DupeSongHandler.convertTitleToTachiID(identifier, element);
-      matchType = "tachiSongID";
+    const pageDifficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
+    let chartMatch;
+    try {
+      chartMatch = ChartResolver.resolveChart(title, pageDifficulty, element);
+    } catch (error) {
+      if (error instanceof ParseError && ChartResolver.needsDetail(title)) {
+        chartMatch = {
+          identifier: title,
+          matchType: "songTitle",
+          difficulty: pageDifficulty
+        };
+      } else {
+        throw error;
+      }
     }
-    const difficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
+    const identifier = chartMatch.identifier;
+    const matchType = chartMatch.matchType;
+    const difficulty = chartMatch.difficulty;
     const timestamp = element.querySelector(
       ".f_r.f_12.h_10"
     )?.innerText;
@@ -455,7 +666,7 @@ var ScoreParser = class {
     }
     return scoreData;
   }
-  static parsePersonalBestScore(element, difficulty, identifier, matchType) {
+  static parsePersonalBestScore(element, difficulty, identifier, matchType, submitDifficulty = difficulty) {
     const score = Number(
       [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)].map((td) => td.textContent.trim())[2].replace(/,/g, "")
     );
@@ -475,7 +686,7 @@ var ScoreParser = class {
       bellLamp,
       matchType,
       identifier,
-      difficulty
+      difficulty: submitDifficulty
     };
   }
   static extractPersonalBestTitle(element) {
@@ -506,38 +717,20 @@ async function* collectRecentScores(ctx, doc = document) {
       );
       continue;
     }
-    let scoreData;
+    const idx = e.querySelector("input[name=idx]")?.value;
+    let parseTarget = e;
+    if (idx) {
+      const detailText = await ctx.ongekiNet.getPlaylogDetail(idx).then((r) => r.text());
+      parseTarget = new DOMParser().parseFromString(detailText, "text/html");
+    }
     try {
-      scoreData = ScoreParser.parseRecentScore(e);
+      yield ScoreParser.parseRecentScore(parseTarget);
     } catch (err) {
       console.error(
         `There was an error parsing score ${i + 1}/${scoreElems.length}`,
         err
       );
-      continue;
     }
-    const idx = e.querySelector("input[name=idx]")?.value;
-    if (!idx) {
-      console.warn(
-        `Could not retrieve parameters for fetching details of score with index ${i}. Yielding incomplete score.`
-      );
-      yield scoreData;
-      continue;
-    }
-    const detailText = await ctx.ongekiNet.getPlaylogDetail(idx).then((r) => r.text());
-    const detailDocument = new DOMParser().parseFromString(
-      detailText,
-      "text/html"
-    );
-    try {
-      scoreData = ScoreParser.parseRecentScore(detailDocument);
-    } catch (err) {
-      console.error(
-        `There was an error parsing score ${i + 1}/${scoreElems.length}. Yielding incomplete score.`,
-        err
-      );
-    }
-    yield scoreData;
   }
 }
 
@@ -634,23 +827,28 @@ async function* collectPersonalBests(ctx) {
       if (!e.querySelector(`.score_table.${difficulty.toLowerCase()}_score_table.t_r.clearfix`)) {
         continue;
       }
-      let identifier = ScoreParser.extractPersonalBestTitle(e);
-      let matchType = "songTitle";
-      if (DupeSongHandler.isDupeSong(identifier)) {
-        const detailDocument = new DOMParser().parseFromString(
+      const title = ScoreParser.extractPersonalBestTitle(e);
+      const pageDifficulty = difficulty;
+      let detailDocument;
+      if (ChartResolver.needsDetail(title)) {
+        detailDocument = new DOMParser().parseFromString(
           await ctx.ongekiNet.getMusicDetail(
             e.querySelector("input[name=idx]")?.value || ""
           ).then((r) => r.text()),
           "text/html"
         );
-        identifier = DupeSongHandler.convertTitleToTachiID(identifier, detailDocument);
-        matchType = "tachiSongID";
       }
+      const chartMatch = ChartResolver.resolveChart(
+        title,
+        pageDifficulty,
+        detailDocument
+      );
       yield ScoreParser.parsePersonalBestScore(
         e,
-        difficulty,
-        identifier,
-        matchType
+        pageDifficulty,
+        chartMatch.identifier,
+        chartMatch.matchType,
+        chartMatch.difficulty
       );
     }
   }

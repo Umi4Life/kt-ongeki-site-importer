@@ -22,43 +22,23 @@ export async function* collectRecentScores(
 			continue;
 		}
 
-		let scoreData: BatchManualScore;
+		const idx = e.querySelector<HTMLInputElement>("input[name=idx]")?.value;
+		let parseTarget: HTMLElement | Document = e;
+
+		if (idx) {
+			const detailText = await ctx.ongekiNet
+				.getPlaylogDetail(idx)
+				.then((r) => r.text());
+			parseTarget = new DOMParser().parseFromString(detailText, "text/html");
+		}
+
 		try {
-			scoreData = ScoreParser.parseRecentScore(e);
+			yield ScoreParser.parseRecentScore(parseTarget);
 		} catch (err) {
 			console.error(
 				`There was an error parsing score ${i + 1}/${scoreElems.length}`,
 				err,
 			);
-			continue;
 		}
-
-		const idx = e.querySelector<HTMLInputElement>("input[name=idx]")?.value;
-		if (!idx) {
-			console.warn(
-				`Could not retrieve parameters for fetching details of score with index ${i}. Yielding incomplete score.`,
-			);
-			yield scoreData;
-			continue;
-		}
-
-		const detailText = await ctx.ongekiNet
-			.getPlaylogDetail(idx)
-			.then((r) => r.text());
-		const detailDocument = new DOMParser().parseFromString(
-			detailText,
-			"text/html",
-		);
-
-		try {
-			scoreData = ScoreParser.parseRecentScore(detailDocument);
-		} catch (err) {
-			console.error(
-				`There was an error parsing score ${i + 1}/${scoreElems.length}. Yielding incomplete score.`,
-				err,
-			);
-		}
-
-		yield scoreData;
 	}
 }
