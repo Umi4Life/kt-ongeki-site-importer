@@ -298,7 +298,7 @@ var DifficultyExtractor = class {
 };
 
 // src/ongeki-importer/domain/parsing/lamp-calculator.ts
-var LampCalculator = class {
+var LampCalculator = class _LampCalculator {
   static calculate(lampImages, options) {
     const bellSlot = options.mode === "pb" ? 2 : 1;
     const comboSlot = options.mode === "pb" ? 3 : 2;
@@ -318,15 +318,48 @@ var LampCalculator = class {
     }
     const hasPerformanceLamp = bellLamp === "FULL BELL" || noteLamp === "FULL COMBO" || noteLamp === "ALL BREAK" || noteLamp === "ALL BREAK+";
     if (!hasPerformanceLamp) {
-      const explicitLoss = lampImages.some((image) => image.includes("lose.png")) || options.mode === "pb" && lampImages[0]?.includes("music_icon_back.png") === true || options.mode === "playlog" && lampImages[0]?.includes("base.png") === true;
-      if (explicitLoss || options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
-        noteLamp = "LOSS";
-      }
+      noteLamp = _LampCalculator.resolveNoteLampWithoutPerformanceLamp(
+        lampImages,
+        options
+      );
     }
     if (bellLamp === "FULL BELL" && noteLamp === "LOSS") {
       noteLamp = "CLEAR";
     }
     return { noteLamp, bellLamp };
+  }
+  static resolveNoteLampWithoutPerformanceLamp(lampImages, options) {
+    if (options.mode === "playlog") {
+      const explicitLoss = lampImages.some((image) => image.includes("lose.png")) || lampImages[0]?.includes("base.png") === true;
+      if (explicitLoss || options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+        return "LOSS";
+      }
+      return "CLEAR";
+    }
+    if (_LampCalculator.isPersonalBestClear(lampImages, options)) {
+      return "CLEAR";
+    }
+    if (lampImages.some((image) => image.includes("lose.png"))) {
+      return "LOSS";
+    }
+    if (options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+      return "LOSS";
+    }
+    return "CLEAR";
+  }
+  static isPersonalBestClear(lampImages, options) {
+    const battleRankIcon = lampImages[0] ?? "";
+    if (battleRankIcon.includes("music_icon_br_")) {
+      return true;
+    }
+    const overDamagePercent = options.overDamagePercent;
+    if (overDamagePercent !== void 0 && overDamagePercent > 0) {
+      return true;
+    }
+    if (overDamagePercent === 0 && options.score >= ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+      return true;
+    }
+    return false;
   }
 };
 
@@ -606,7 +639,7 @@ var ChartResolver = class _ChartResolver {
 };
 
 // src/ongeki-importer/domain/parsing/score-parser.ts
-var ScoreParser = class {
+var ScoreParser = class _ScoreParser {
   static parseRecentScore(element) {
     const title = element.querySelector(
       ".m_5.l_h_10.break"
@@ -687,9 +720,26 @@ var ScoreParser = class {
     }
     return scoreData;
   }
+  static parseOverDamagePercent(text) {
+    if (!text) {
+      return void 0;
+    }
+    const normalized = text.trim().replace(/,/g, "");
+    if (!normalized.endsWith("%")) {
+      return void 0;
+    }
+    const value = Number(normalized.slice(0, -1));
+    return Number.isFinite(value) ? value : void 0;
+  }
   static parsePersonalBestScore(element, difficulty, identifier, matchType, submitDifficulty = difficulty) {
-    const score = Number(
-      [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)].map((td) => td.textContent.trim())[2].replace(/,/g, "")
+    const scoreValues = [
+      ...element.querySelectorAll(
+        `td.score_value.${difficulty.toLowerCase()}_score_value`
+      )
+    ];
+    const score = Number(scoreValues[2]?.textContent?.trim().replace(/,/g, ""));
+    const overDamagePercent = _ScoreParser.parseOverDamagePercent(
+      scoreValues[0]?.textContent
     );
     const lampImages = [
       ...element.querySelectorAll(
@@ -698,7 +748,8 @@ var ScoreParser = class {
     ].map((e) => e.src);
     const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages, {
       mode: "pb",
-      score
+      score,
+      overDamagePercent
     });
     const platinumScore = Number(
       element.querySelector(`.t_r.platinum_high_score_text_block`)?.textContent.split("/")[0].trim().replace(/,/g, "")

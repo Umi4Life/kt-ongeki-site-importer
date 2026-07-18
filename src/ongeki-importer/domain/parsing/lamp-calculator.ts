@@ -6,6 +6,7 @@ export type LampCalculatorMode = "pb" | "playlog";
 export interface LampCalculatorOptions {
 	mode: LampCalculatorMode;
 	score: number;
+	overDamagePercent?: number;
 }
 
 export class LampCalculator {
@@ -41,16 +42,10 @@ export class LampCalculator {
 			noteLamp === "ALL BREAK+";
 
 		if (!hasPerformanceLamp) {
-			const explicitLoss =
-				lampImages.some((image) => image.includes("lose.png")) ||
-				(options.mode === "pb" &&
-					lampImages[0]?.includes("music_icon_back.png") === true) ||
-				(options.mode === "playlog" &&
-					lampImages[0]?.includes("base.png") === true);
-
-			if (explicitLoss || options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
-				noteLamp = "LOSS";
-			}
+			noteLamp = LampCalculator.resolveNoteLampWithoutPerformanceLamp(
+				lampImages,
+				options,
+			);
 		}
 
 		if (bellLamp === "FULL BELL" && noteLamp === "LOSS") {
@@ -58,5 +53,61 @@ export class LampCalculator {
 		}
 
 		return { noteLamp, bellLamp };
+	}
+
+	private static resolveNoteLampWithoutPerformanceLamp(
+		lampImages: Array<string>,
+		options: LampCalculatorOptions,
+	): OngekiNoteLamp {
+		if (options.mode === "playlog") {
+			const explicitLoss =
+				lampImages.some((image) => image.includes("lose.png")) ||
+				lampImages[0]?.includes("base.png") === true;
+
+			if (explicitLoss || options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+				return "LOSS";
+			}
+
+			return "CLEAR";
+		}
+
+		if (LampCalculator.isPersonalBestClear(lampImages, options)) {
+			return "CLEAR";
+		}
+
+		if (lampImages.some((image) => image.includes("lose.png"))) {
+			return "LOSS";
+		}
+
+		if (options.score < ONGEKI_TECHNICAL_RANK_S_THRESHOLD) {
+			return "LOSS";
+		}
+
+		return "CLEAR";
+	}
+
+	private static isPersonalBestClear(
+		lampImages: Array<string>,
+		options: LampCalculatorOptions,
+	): boolean {
+		const battleRankIcon = lampImages[0] ?? "";
+
+		if (battleRankIcon.includes("music_icon_br_")) {
+			return true;
+		}
+
+		const overDamagePercent = options.overDamagePercent;
+		if (overDamagePercent !== undefined && overDamagePercent > 0) {
+			return true;
+		}
+
+		if (
+			overDamagePercent === 0 &&
+			options.score >= ONGEKI_TECHNICAL_RANK_S_THRESHOLD
+		) {
+			return true;
+		}
+
+		return false;
 	}
 }

@@ -106,6 +106,20 @@ export class ScoreParser {
 		return scoreData;
 	}
 
+	static parseOverDamagePercent(text: string | null | undefined): number | undefined {
+		if (!text) {
+			return undefined;
+		}
+
+		const normalized = text.trim().replace(/,/g, "");
+		if (!normalized.endsWith("%")) {
+			return undefined;
+		}
+
+		const value = Number(normalized.slice(0, -1));
+		return Number.isFinite(value) ? value : undefined;
+	}
+
 	static parsePersonalBestScore(
 		element: HTMLElement | Document,
 		difficulty: OngekiDifficulty,
@@ -113,10 +127,15 @@ export class ScoreParser {
 		matchType: OngekiMatchType,
 		submitDifficulty: OngekiDifficulty = difficulty,
 	): BatchManualScore {
-		const score = Number(
-			[...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
-				.map((td) => td.textContent.trim())[2]
-				.replace(/,/g, ""),
+		const scoreValues = [
+			...element.querySelectorAll<HTMLElement>(
+				`td.score_value.${difficulty.toLowerCase()}_score_value`,
+			),
+		];
+
+		const score = Number(scoreValues[2]?.textContent?.trim().replace(/,/g, ""));
+		const overDamagePercent = ScoreParser.parseOverDamagePercent(
+			scoreValues[0]?.textContent,
 		);
 
 		const lampImages = [
@@ -128,6 +147,7 @@ export class ScoreParser {
 		const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages, {
 			mode: "pb",
 			score,
+			overDamagePercent,
 		});
 
 		const platinumScore = Number(
