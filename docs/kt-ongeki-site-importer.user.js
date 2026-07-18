@@ -36,6 +36,8 @@ var KamaitachiClient = class {
     this.storage = storage;
     this.status = status;
   }
+  storage;
+  status;
   async submitScores(options) {
     const { scores: newScores = [] } = options;
     const scores = JSON.parse(this.storage.getScores());
@@ -138,12 +140,15 @@ var OngekiNetError = class extends Error {
     this.errCode = errCode;
     this.errDescription = errDescription;
   }
+  errCode;
+  errDescription;
 };
 var ParseError = class extends Error {
   constructor(context, message) {
     super(`Parse error in ${context}: ${message}`);
     this.context = context;
   }
+  context;
 };
 
 // src/ongeki-importer/infrastructure/ongeki-net-client.ts
@@ -159,6 +164,8 @@ var OngekiNetClient = class {
       this.baseUrl = baseUrl.substring(0, baseUrl.length - 1);
     }
   }
+  baseUrl;
+  status;
   domParser;
   async getPlaylog() {
     return this.request("/record/playlog/");
