@@ -86,16 +86,16 @@ npm run build
 
 The bundled userscript is written to `docs/kt-ongeki-site-importer.user.js`. A minified bookmarklet build is also emitted to `docs/kt-ongeki-site-importer.min.js`.
 
-### Install locally (Firefox)
+### Install locally
 
-1. Install a userscript manager add-on (Violentmonkey or Tampermonkey are common on Firefox).
+1. Install a userscript manager add-on.
 2. Run `npm run build`.
-3. Install `docs/kt-ongeki-site-importer.user.js` in your userscript manager (open the file or use your manager's "install from file" flow).
+3. Install `docs/kt-ongeki-site-importer.user.js` in your userscript manager.
 4. Open [ONGEKI-NET](https://ongeki-net.com/ongeki-mobile/home), set your API key, and test an import.
 
 ### Edit loop
 
-Source lives under `src/ongeki-importer/`. The project uses [bundlemonkey](https://github.com/mkobayashime/bundlemonkey) via `scripts/bundle.js` (Windows path workaround included).
+Source lives under `src/ongeki-importer/`. This project uses [bundlemonkey](https://github.com/mkobayashime/bundlemonkey) via `scripts/bundle.js`.
 
 | Command | Purpose |
 | --- | --- |
@@ -108,18 +108,19 @@ Source lives under `src/ongeki-importer/`. The project uses [bundlemonkey](https
 | `npm run watch:remote` | Rebuild on save using a one-time stub that `@require`s `.dev/` output |
 | `npm run typecheck` | Run `tsc --noEmit` |
 
-CI runs `generate:lookups`, `test`, `typecheck`, and `build` on every push and pull request to `master` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)). On `master`, CI also commits refreshed lookups and the rebuilt `docs/` bundle when Tachi seeds change (weekly schedule, manual **Run workflow**, or any push). Pull requests must pass `verify:lookups` so committed lookups stay in sync. The only external dependency for refresh is the public Tachi seed JSON; commits use the built-in `github-actions[bot]` token.
+CI runs `generate:lookups`, `test`, `typecheck`, and `build` on every push and pull request to `master` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).    
+Pull requests must pass `verify:lookups`.
 
-**Recommended workflow**
+**Workflow**
 
 1. Run `npm run watch`.
 2. Edit files in `src/ongeki-importer`.
 3. On save, paste the clipboard contents into your userscript manager editor and save.
-4. Reload the ONGEKI-NET tab to test.
+4. Reload ONGEKI-NET page.
 
 For `watch:remote`, paste the stub once, then allow your userscript manager to load local files (`file://`). If remote watch is awkward in your browser, use `npm run watch` + paste instead.
 
-### Project layout
+### Structure
 
 ```
 src/ongeki-importer/
@@ -131,9 +132,4 @@ src/ongeki-importer/
   ui/                 # DOM widgets
   config/             # constants, generated Tachi chart lookups
 ```
-
-### Known limitations
-
-- **ブツメツビーターズ** Re:MASTER is the only white chart without a Tachi `inGameID`; it is matched via `songTitle` and submitted as `LUNATIC` per Tachi's import rules.
-- Tachi chart lookups refresh automatically on `master` via CI; new white-chart / Re:MASTER entries are picked up without a manual release step.
 
