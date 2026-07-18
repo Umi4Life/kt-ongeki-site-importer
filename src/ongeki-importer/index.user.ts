@@ -1,29 +1,22 @@
-import { ImportButton } from "./ui-component/widgets/import-button";
-import { Navigation } from "./ui-component/navigation";
-import { ScoreImporter } from "./ui-component/score-importer";
+import { defineUserScript } from "bundlemonkey";
+import { createAppContext } from "./app/bootstrap";
+import { route } from "./app/router";
 
-console.log("kt-ongeki-site-importer loaded");
-console.log("running ongeki import script on ", location.href);
+import pkg from "../../package.json";
 
-const pathname = location.pathname.replace(/\/$/, "");
+export default defineUserScript({
+	name: "kt-ongeki-site-importer",
+	version: pkg.version,
+	grant: ["GM.xmlHttpRequest"],
+	connect: ["kamaitachi.xyz", "kamai.tachi.ac"],
+	author: "umi4life",
+	include: ["https://ongeki-net.com/ongeki-mobile/*"],
+	require: ["https://cdn.jsdelivr.net/npm/@trim21/gm-fetch"],
+	main: () => {
+		console.log("kt-ongeki-site-importer loaded");
+		console.log("running ongeki import script on ", location.href);
 
-switch (pathname) {
-	case "/ongeki-mobile/record/musicGenre":
-	case "/ongeki-mobile/record/musicWord":
-	case "/ongeki-mobile/record/musicRank":
-	case "/ongeki-mobile/record/musicLevel": {
-		ImportButton.create("IMPORT ALL PBs", () => {
-			Navigation.showPbImportWarning();
-		});
-		break;
-	}
-	case "/ongeki-mobile/record/playlog": {
-		ImportButton.create("IMPORT RECENT SCORES", async () => {
-			await ScoreImporter.importRecentScores(document);
-		});
-		break;
-	}
-	case "/ongeki-mobile/home":
-		Navigation.addNav();
-		break;
-}
+		const ctx = createAppContext();
+		route(ctx);
+	},
+});

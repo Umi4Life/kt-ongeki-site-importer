@@ -4,25 +4,26 @@ import {
 	ImportStatus as ImportStatusType,
 	SubmitScoresOptions,
 	BatchManualScore,
-} from "../models/types";
-import { Preference } from "../ui-component/utils/preference";
-import { ImportStatus } from "../ui-component/widgets/import-status";
-import { KT_BASE_URL, __DEV__, KT_SELECTED_CONFIG } from "../utils/constants";
+} from "../domain/models/types";
+import { StatusReporter } from "../app/context";
+import { Preference } from "./preference";
+import { KT_BASE_URL, __DEV__, KT_SELECTED_CONFIG } from "../config/constants";
 
 export class KamaitachiClient {
+	constructor(
+		private storage: Preference,
+		private status: StatusReporter,
+	) {}
 
-	static async submitScores(options: SubmitScoresOptions): Promise<void> {
+	async submitScores(options: SubmitScoresOptions): Promise<void> {
 		const { scores: newScores = [] } = options;
-		const scores: Array<BatchManualScore> = JSON.parse(
-			Preference.getScores(),
-		);
+		const scores: Array<BatchManualScore> = JSON.parse(this.storage.getScores());
 
-		// Save scores in localStorage in case Kamaitachi is down
 		scores.push(...newScores);
-		Preference.setScores(JSON.stringify(scores));
+		this.storage.setScores(JSON.stringify(scores));
 
 		if (scores.length === 0) {
-			ImportStatus.update("Nothing to import.");
+			this.status.update("Nothing to import.");
 			return;
 		}
 
@@ -35,7 +36,6 @@ export class KamaitachiClient {
 			scores,
 		};
 
-		// Development mode: export JSON instead of uploading
 		if (__DEV__ && KT_SELECTED_CONFIG === "prod") {
 			console.log(
 				"Currently in development mode. Scores will not be uploaded to Kamaitachi.",
@@ -57,32 +57,31 @@ export class KamaitachiClient {
 		const jsonBody = JSON.stringify(body);
 
 		document.querySelector("#kt-import-button")?.remove();
-		ImportStatus.update("Submitting scores...");
+		this.status.update("Submitting scores...");
 
 		let resp: KamaitachiAPIResponse<QueuedImport>;
 		try {
 			resp = await fetch(`${KT_BASE_URL}/ir/direct-manual/import`, {
 				method: "POST",
 				headers: {
-					authorization: `Bearer ${Preference.getApiKey()}`,
+					authorization: `Bearer ${this.storage.getApiKey()}`,
 					"content-type": "application/json",
 					"x-user-intent": "true",
 				},
 				body: jsonBody,
 			}).then((r) => r.json());
 		} catch (e) {
-			ImportStatus.update(
+			this.status.update(
 				`Could not submit scores to Kamaitachi: ${e}\nYour scores are saved in browser storage and will be submitted next import.`,
 			);
 			return;
 		}
 
-		// When we reach this point, Kamaitachi has received and stored our import.
-		Preference.setScores("[]");
-		Preference.setClasses("{}");
+		this.storage.setScores("[]");
+		this.storage.setClasses("{}");
 
 		if (!resp.success) {
-			ImportStatus.update(
+			this.status.update(
 				`Could not submit scores to Kamaitachi: ${resp.description}`,
 			);
 			return;
@@ -90,23 +89,23 @@ export class KamaitachiClient {
 
 		const pollUrl = resp.body.url;
 
-		ImportStatus.update("Importing scores...");
+		this.status.update("Importing scores...");
 		await this.pollStatus(pollUrl, options);
 	}
 
-	private static async pollStatus(
+	private async pollStatus(
 		pollUrl: string,
 		importOptions: SubmitScoresOptions,
 	): Promise<void> {
 		const body: KamaitachiAPIResponse<ImportStatusType> = await fetch(pollUrl, {
 			method: "GET",
 			headers: {
-				Authorization: `Bearer ${Preference.getApiKey()}`,
+				Authorization: `Bearer ${this.storage.getApiKey()}`,
 			},
 		}).then((r) => r.json());
 
 		if (!body.success) {
-			ImportStatus.update(`Terminal error: ${body.description}`);
+			this.status.update(`Terminal error: ${body.description}`);
 			return;
 		}
 
@@ -116,7 +115,7 @@ export class KamaitachiClient {
 					? body.body.progress.toString()
 					: body.body.progress.description;
 
-			ImportStatus.update(
+			this.status.update(
 				`Importing scores... ${body.description} Progress: ${progress}`,
 			);
 			setTimeout(() => this.pollStatus(pollUrl, importOptions), 1000);
@@ -134,6 +133,6 @@ export class KamaitachiClient {
 			}
 		}
 
-		ImportStatus.update(message);
+		this.status.update(message);
 	}
 }

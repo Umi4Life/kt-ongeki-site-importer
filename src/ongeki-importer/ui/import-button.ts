@@ -7,7 +7,6 @@ export class ImportButton {
 		message: string,
 		onClick: (this: GlobalEventHandlers, ev: MouseEvent) => unknown,
 	): HTMLAnchorElement {
-		// Remove existing button
 		document.getElementById(this.BUTTON_ID)?.remove();
 
 		const importButton = document.createElement("a");
@@ -15,7 +14,6 @@ export class ImportButton {
 		importButton.style.cssText = this.BUTTON_STYLES;
 		importButton.append(document.createTextNode(message));
 
-		// Insert after the second .f_0 element
 		document.querySelectorAll(".f_0")[1]?.insertAdjacentElement("afterend", importButton);
 
 		importButton.onclick = onClick;

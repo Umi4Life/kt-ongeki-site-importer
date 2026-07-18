@@ -1,6 +1,6 @@
-import { OngekiNetError } from "../models/errors";
-import { ImportStatus } from "../ui-component/widgets/import-status";
-import { ONGEKI_NET_REQUEST_DELAY_MS } from "../utils/constants";
+import { OngekiNetError } from "../domain/models/errors";
+import { StatusReporter } from "../app/context";
+import { ONGEKI_NET_REQUEST_DELAY_MS } from "../config/constants";
 
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -9,7 +9,10 @@ function sleep(ms: number): Promise<void> {
 export class OngekiNetClient {
 	private domParser: DOMParser;
 
-	constructor(public baseUrl: string) {
+	constructor(
+		public baseUrl: string,
+		private status: StatusReporter,
+	) {
 		this.domParser = new DOMParser();
 
 		if (!baseUrl.endsWith("/")) {
@@ -40,16 +43,14 @@ export class OngekiNetClient {
 		const respUrl = new URL(resp.url);
 
 		if (resp.status === 503) {
-			ImportStatus.update("ONGEKI.NET is currently under maintenance. Please try again later.");
+			this.status.update("ONGEKI.NET is currently under maintenance. Please try again later.");
 			throw new Error("ONGEKI.NET is under maintenance");
 		}
 
-		// Check for error page
 		if (respUrl.pathname.endsWith("/error/")) {
 			this.handleErrorResponse(await resp.text());
 		}
 
-		// Check for rate limiting
 		if (respUrl.pathname.includes("/rightLimit/")) {
 			this.handleRateLimitResponse(await resp.text());
 		}
@@ -69,7 +70,7 @@ export class OngekiNetClient {
 				? errorElems[1]!.textContent
 				: "An unknown error occurred.";
 
-		ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+		this.status.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
 		throw new OngekiNetError(errCode, errDescription);
 	}
 
@@ -85,7 +86,7 @@ export class OngekiNetClient {
 				? errorElems[1]!.textContent
 				: "Account has no subscription (https://gw.sega.jp/gateway/login/?product_name=ongeki).";
 
-		ImportStatus.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
+		this.status.update(`ONGEKI-NET error ${errCode}: ${errDescription}`);
 		throw new OngekiNetError(errCode, errDescription);
 	}
 }

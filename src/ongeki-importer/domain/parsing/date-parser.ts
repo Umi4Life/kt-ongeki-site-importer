@@ -22,7 +22,6 @@ export class DateParser {
 		const paddedDay = day.padStart(2, "0");
 		const paddedHour = hour.padStart(2, "0");
 
-		// Construct ISO-8601 time with JST timezone
 		const isoTime = `${year}-${paddedMonth}-${paddedDay}T${paddedHour}:${minute}:00.000+09:00`;
 		return new Date(isoTime);
 	}

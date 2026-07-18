@@ -71,11 +71,57 @@ For me to reproduce errors better:
 
 ## Development
 
-1. Edit files in `src/ongeki-importer`
-2. Run `npm run build` in terminal
-3. Userscript will be output to `docs/kt-ongeki-site-importer.user.js`
+### Prerequisites
 
-## TODO
+- Node.js 18+
+- A userscript manager in your browser (Tampermonkey, Violentmonkey, or Greasemonkey)
 
-- switch to bundlemonkey for better bundling
+### Setup
+
+```bash
+npm install
+npm run build
+```
+
+The bundled userscript is written to `docs/kt-ongeki-site-importer.user.js`. A minified bookmarklet build is also emitted to `docs/kt-ongeki-site-importer.min.js`.
+
+### Install locally (Firefox)
+
+1. Install a userscript manager add-on (Violentmonkey or Tampermonkey are common on Firefox).
+2. Run `npm run build`.
+3. Install `docs/kt-ongeki-site-importer.user.js` in your userscript manager (open the file or use your manager's "install from file" flow).
+4. Open [ONGEKI-NET](https://ongeki-net.com/ongeki-mobile/home), set your API key, and test an import.
+
+### Edit loop
+
+Source lives under `src/ongeki-importer/`. The project uses [bundlemonkey](https://github.com/mkobayashime/bundlemonkey) via `scripts/bundle.js` (Windows path workaround included).
+
+| Command | Purpose |
+| --- | --- |
+| `npm run build` | Production bundle to `docs/` |
+| `npm run watch` | Rebuild on save and copy output to clipboard |
+| `npm run watch:remote` | Rebuild on save using a one-time stub that `@require`s `.dev/` output |
+| `npm run typecheck` | Run `tsc --noEmit` |
+
+**Recommended workflow**
+
+1. Run `npm run watch`.
+2. Edit files in `src/ongeki-importer`.
+3. On save, paste the clipboard contents into your userscript manager editor and save.
+4. Reload the ONGEKI-NET tab to test.
+
+For `watch:remote`, paste the stub once, then allow your userscript manager to load local files (`file://`). If remote watch is awkward in your browser, use `npm run watch` + paste instead.
+
+### Project layout
+
+```
+src/ongeki-importer/
+  index.user.ts       # userscript entry + metadata
+  app/                # bootstrap, router, shared context
+  features/           # import workflows (recent scores, PBs, API key)
+  domain/             # types, errors, pure parsers
+  infrastructure/     # HTTP clients, local storage
+  ui/                 # DOM widgets
+  config/             # constants
+```
 

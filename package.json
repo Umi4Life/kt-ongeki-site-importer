@@ -4,7 +4,10 @@
   "description": "Import scores from https://ongeki-net.com to Kamaitachi",
   "main": "index.js",
   "scripts": {
-    "build": "node build.js"
+    "build": "node scripts/bundle.js",
+    "watch": "node scripts/watch.js",
+    "watch:remote": "node scripts/watch.js --remote",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -19,11 +22,12 @@
   },
   "homepage": "https://github.com/Umi4Life/kt-ongeki-site-importer#readme",
   "dependencies": {
-    "esbuild": "^0.27.2",
-    "eslint": "^9.39.2",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@rollup/plugin-terser": "^0.4.4"
+    "@rollup/plugin-terser": "^0.4.4",
+    "bundlemonkey": "^0.7.6",
+    "esbuild": "^0.27.2",
+    "eslint": "^9.39.2"
   }
 }

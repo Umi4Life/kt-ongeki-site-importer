@@ -1,16 +1,12 @@
 import { BatchManualScore, OngekiDifficulty } from "../models/types";
-import { OngekiNetClient } from "../api/ongeki-net-client";
-import { DifficultyExtractor } from "./utils/difficulty-extractor";
-import { LampCalculator } from "./utils/lamp-calculator";
-import { DateParser } from "../utils/date-parser";
+import { DifficultyExtractor } from "./difficulty-extractor";
+import { LampCalculator } from "./lamp-calculator";
+import { DateParser } from "./date-parser";
 import { ParseError } from "../models/errors";
-import { ONGEKI_NET_BASE_URL } from "../utils/constants";
-import { DupeSongHandler } from "./utils/dupe-song-handler";
+import { DupeSongHandler } from "./dupe-song-handler";
 
 export class ScoreParser {
-    private static ongekiNetClient = new OngekiNetClient(ONGEKI_NET_BASE_URL);
-
-	static parseRecentScore(element: HTMLElement | Document, isDetailPage = false): BatchManualScore {
+	static parseRecentScore(element: HTMLElement | Document): BatchManualScore {
 		let identifier = element.querySelector<HTMLDivElement>(
 			".m_5.l_h_10.break",
 		)?.innerText.trim();
@@ -56,7 +52,6 @@ export class ScoreParser {
 			timeAchieved,
 		};
 
-		// Parse optional judgements data
 		try {
 			scoreData.judgements = {
 				cbreak: Number(element.querySelector<HTMLElement>(".score_critical_break .f_b")?.textContent?.replace(/,/gu, "")),
@@ -68,7 +63,6 @@ export class ScoreParser {
 
 		scoreData.optional = {};
 
-		// Parse max combo
 		try {
 			const maxComboElement = element
 				.querySelector<HTMLElement>('img[src*="score_max_combo.png"]')
@@ -79,14 +73,12 @@ export class ScoreParser {
 				: undefined;
 		} catch (_) {}
 
-		// Parse damage
 		try {
 			scoreData.optional.damage = Number(
 				element.querySelector<HTMLElement>("tr.score_damage td")?.textContent?.replace(/,/gu, ""),
 			);
 		} catch (_) {}
 
-		// Parse bell count
 		try {
 			const bellText = element.querySelector<HTMLElement>(".score_bell .f_b")?.textContent?.split("/");
 			scoreData.optional.bellCount = Number(bellText?.[0]?.replace?.(/,/gu, ""));
@@ -96,64 +88,57 @@ export class ScoreParser {
 		return scoreData;
 	}
 
-    static async parsePersonalBestScore(element: HTMLElement | Document, difficulty: OngekiDifficulty): Promise<BatchManualScore> {
-        let identifier = element.querySelector<HTMLInputElement>(
-            "div.music_label.p_5.break",
-        )?.textContent;
+	static parsePersonalBestScore(
+		element: HTMLElement | Document,
+		difficulty: OngekiDifficulty,
+		identifier: string,
+		matchType: string,
+	): BatchManualScore {
+		const score = Number(
+			[...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
+				.map((td) => td.textContent.trim())[2]
+				.replace(/,/g, ""),
+		);
 
-        if (!identifier) {
-            throw new ParseError(
-                "ScoreParser.parsePersonalBestScore",
-                "Personal best score does not contain a title.",
-            );
-        }
+		const lampImages = [
+			...element.querySelectorAll<HTMLImageElement>(
+				".music_score_icon_area.t_r.f_0 img",
+			),
+		].map((e) => e.src);
 
-		let matchType = "songTitle";
-		if (DupeSongHandler.isDupeSong(identifier)) {
-			const detailDocument = new DOMParser().parseFromString(
-			await this.ongekiNetClient
-					.getMusicDetail(
-						element.querySelector<HTMLInputElement>("input[name=idx]")?.value || "",
-					)
-					.then((r: { text: () => any; }) => r.text()),
-				"text/html",
-            );
-			identifier = DupeSongHandler.convertTitleToTachiID(identifier, detailDocument);
-			matchType = "tachiSongID";
+		const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages);
+
+		const platinumScore = Number(
+			element
+				.querySelector<HTMLElement>(`.t_r.platinum_high_score_text_block`)
+				?.textContent.split("/")[0]
+				.trim()
+				.replace(/,/g, ""),
+		);
+
+		return {
+			score,
+			platinumScore,
+			noteLamp,
+			bellLamp,
+			matchType,
+			identifier,
+			difficulty,
+		};
+	}
+
+	static extractPersonalBestTitle(element: HTMLElement | Document): string {
+		const identifier = element.querySelector<HTMLElement>(
+			"div.music_label.p_5.break",
+		)?.textContent;
+
+		if (!identifier) {
+			throw new ParseError(
+				"ScoreParser.extractPersonalBestTitle",
+				"Personal best score does not contain a title.",
+			);
 		}
 
-        const score = Number(
-            [...element.querySelectorAll(`td.score_value.${difficulty.toLowerCase()}_score_value`)]
-                .map((td) => td.textContent.trim())[2]
-                .replace(/,/g, ""),
-        );
-
-        const lampImages = [
-            ...element.querySelectorAll<HTMLImageElement>(
-                ".music_score_icon_area.t_r.f_0 img",
-            ),
-        ].map((e) => e.src);
-
-        const { noteLamp, bellLamp } = LampCalculator.calculate(lampImages);
-
-        const platinumScore = Number(
-            element
-                .querySelector<HTMLElement>(`.t_r.platinum_high_score_text_block`)
-                ?.textContent.split("/")[0]
-                .trim()
-                .replace(/,/g, ""),
-        );
-
-        const scoreData: BatchManualScore = {
-            score,
-            platinumScore,
-            noteLamp,
-            bellLamp,
-            matchType,
-            identifier,
-            difficulty,
-        };
-
-        return scoreData;
-    }
+		return identifier;
+	}
 }

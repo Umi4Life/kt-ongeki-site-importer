@@ -1,4 +1,4 @@
-import { ParseError } from "../../models/errors";
+import { ParseError } from "../models/errors";
 
 const DUPE_SONGS = [
 	"Singularity",
@@ -7,14 +7,13 @@ const DUPE_SONGS = [
 ] as const;
 
 export class DupeSongHandler {
-
 	static isDupeSong(title: string): title is (typeof DUPE_SONGS)[number] {
 		return DUPE_SONGS.includes(title as (typeof DUPE_SONGS)[number]);
 	}
 
-	static convertTitleToTachiID(title: string, doc: HTMLElement | Document): string  {
+	static convertTitleToTachiID(title: string, doc: HTMLElement | Document): string {
 		switch (title) {
-			case "Singularity":	
+			case "Singularity":
 				return this.processSingularityToTachiID(doc);
 			case "Perfect Shining!!":
 				return this.processPerfectShiningToTachiID(doc);
@@ -28,19 +27,18 @@ export class DupeSongHandler {
 		}
 	}
 
-	// Always returns TachiID to prevent ambiguous import, one varient has been removed from official
 	private static processHandinHandToTachiID(_: HTMLElement | Document): string {
 		return "337";
 	}
 
-    private static processSingularityToTachiID(doc: HTMLElement | Document): string {
+	private static processSingularityToTachiID(doc: HTMLElement | Document): string {
 		const imgSrc = doc.querySelector<HTMLImageElement>("img.m_5.f_l")?.src;
 		switch (imgSrc) {
-			case "https://ongeki-net.com/ongeki-mobile/img/music/ac5cab7a8a61d825.png": // Koboshi
+			case "https://ongeki-net.com/ongeki-mobile/img/music/ac5cab7a8a61d825.png":
 				return "362";
-			case "https://ongeki-net.com/ongeki-mobile/img/music/9cc53da5e1896b30.png": // Arcaea
+			case "https://ongeki-net.com/ongeki-mobile/img/music/9cc53da5e1896b30.png":
 				return "425";
-			case "https://ongeki-net.com/ongeki-mobile/img/music/19bdf34c7aed1ee0.png": // Mahjong
+			case "https://ongeki-net.com/ongeki-mobile/img/music/19bdf34c7aed1ee0.png":
 				return "487";
 			default:
 				throw new ParseError(
@@ -51,9 +49,9 @@ export class DupeSongHandler {
 	}
 
 	private static processPerfectShiningToTachiID(doc: HTMLElement | Document): string {
-		if (doc.textContent?.includes("星咲 あかり Lv.1")) { // Lunatic 0
+		if (doc.textContent?.includes("星咲 あかり Lv.1")) {
 			return "817";
-		} else if (doc.textContent?.includes("星咲 あかり Lv.39")) { // Lunatic 13+
+		} else if (doc.textContent?.includes("星咲 あかり Lv.39")) {
 			return "69";
 		}
 		throw new ParseError(
