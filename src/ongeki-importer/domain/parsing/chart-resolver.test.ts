@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { ChartResolver } from "./chart-resolver";
+import {
+	ChartLookups,
+	ChartResolver,
+	chartResolver,
+	generatedChartLookups,
+} from "./chart-resolver";
 import { ParseError } from "../models/errors";
+
+const FIXTURE_LOOKUPS: ChartLookups = {
+	remasterByTitle: { "Fixture Remaster": "8187" },
+	remasterSongTitleOnly: ["Fixture Title Only"],
+	lunaticByTitle: { "Fixture Lunatic": "8188" },
+};
+
+const resolver = new ChartResolver(FIXTURE_LOOKUPS);
 
 function parseHtml(html: string): HTMLElement {
 	const doc = new DOMParser().parseFromString(html, "text/html");
@@ -8,24 +21,38 @@ function parseHtml(html: string): HTMLElement {
 }
 
 describe("ChartResolver.resolveChart", () => {
-	it("maps Re:MASTER white charts with inGameID as LUNATIC for Tachi import", () => {
-		expect(ChartResolver.resolveChart("WakeUP MakeUP FEVER!", "LUNATIC")).toEqual({
+	it("maps Re:MASTER charts with inGameID as LUNATIC for Tachi import", () => {
+		expect(resolver.resolveChart("Fixture Remaster", "LUNATIC")).toEqual({
 			identifier: "8187",
 			matchType: "inGameID",
 			difficulty: "LUNATIC",
 		});
 	});
 
-	it("maps ブツメツビーターズ via songTitle when inGameID is null", () => {
-		expect(ChartResolver.resolveChart("ブツメツビーターズ", "LUNATIC")).toEqual({
-			identifier: "ブツメツビーターズ",
+	it("maps Re:MASTER charts without inGameID via songTitle", () => {
+		expect(resolver.resolveChart("Fixture Title Only", "LUNATIC")).toEqual({
+			identifier: "Fixture Title Only",
 			matchType: "songTitle",
 			difficulty: "LUNATIC",
 		});
 	});
 
-	it("maps extra LUNATIC charts by inGameID", () => {
-		expect(ChartResolver.resolveChart("わたしたち魔法乙女です☆", "LUNATIC")).toEqual({
+	it("prefers remaster inGameID when a title appears in several tables", () => {
+		const ambiguous = new ChartResolver({
+			remasterByTitle: { "Fixture Ambiguous": "8189" },
+			remasterSongTitleOnly: ["Fixture Ambiguous"],
+			lunaticByTitle: { "Fixture Ambiguous": "9999" },
+		});
+
+		expect(ambiguous.resolveChart("Fixture Ambiguous", "LUNATIC")).toEqual({
+			identifier: "8189",
+			matchType: "inGameID",
+			difficulty: "LUNATIC",
+		});
+	});
+
+	it("maps LUNATIC charts by inGameID", () => {
+		expect(resolver.resolveChart("Fixture Lunatic", "LUNATIC")).toEqual({
 			identifier: "8188",
 			matchType: "inGameID",
 			difficulty: "LUNATIC",
@@ -33,16 +60,16 @@ describe("ChartResolver.resolveChart", () => {
 	});
 
 	it("falls back to songTitle + LUNATIC for unknown lunatic-tab titles", () => {
-		expect(ChartResolver.resolveChart("Unknown Song Title", "LUNATIC")).toEqual({
+		expect(resolver.resolveChart("Unknown Song Title", "LUNATIC")).toEqual({
 			identifier: "Unknown Song Title",
 			matchType: "songTitle",
 			difficulty: "LUNATIC",
 		});
 	});
 
-	it("uses songTitle for non-lunatic difficulties by default", () => {
-		expect(ChartResolver.resolveChart("Some Song", "MASTER")).toEqual({
-			identifier: "Some Song",
+	it("ignores the lookup tables for non-lunatic difficulties", () => {
+		expect(resolver.resolveChart("Fixture Remaster", "MASTER")).toEqual({
+			identifier: "Fixture Remaster",
 			matchType: "songTitle",
 			difficulty: "MASTER",
 		});
@@ -53,9 +80,7 @@ describe("ChartResolver.resolveChart", () => {
 			`<img class="m_5 f_l" src="https://ongeki-net.com/ongeki-mobile/img/music/9cc53da5e1896b30.png">`,
 		);
 
-		expect(
-			ChartResolver.resolveChart("Singularity", "MASTER", doc),
-		).toEqual({
+		expect(resolver.resolveChart("Singularity", "MASTER", doc)).toEqual({
 			identifier: "454",
 			matchType: "inGameID",
 			difficulty: "MASTER",
@@ -65,9 +90,7 @@ describe("ChartResolver.resolveChart", () => {
 	it("disambiguates Perfect Shining loctest chart", () => {
 		const doc = parseHtml(`<div>星咲 あかり Lv.1</div>`);
 
-		expect(
-			ChartResolver.resolveChart("Perfect Shining!!", "LUNATIC", doc),
-		).toEqual({
+		expect(resolver.resolveChart("Perfect Shining!!", "LUNATIC", doc)).toEqual({
 			identifier: "8003",
 			matchType: "inGameID",
 			difficulty: "LUNATIC",
@@ -77,9 +100,7 @@ describe("ChartResolver.resolveChart", () => {
 	it("disambiguates Perfect Shining white chart as LUNATIC for Tachi import", () => {
 		const doc = parseHtml(`<div>星咲 あかり Lv.39</div>`);
 
-		expect(
-			ChartResolver.resolveChart("Perfect Shining!!", "LUNATIC", doc),
-		).toEqual({
+		expect(resolver.resolveChart("Perfect Shining!!", "LUNATIC", doc)).toEqual({
 			identifier: "8091",
 			matchType: "inGameID",
 			difficulty: "LUNATIC",
@@ -89,9 +110,7 @@ describe("ChartResolver.resolveChart", () => {
 	it("disambiguates Hand in Hand livetune variant", () => {
 		const doc = parseHtml(`<motion>livetune</motion>`);
 
-		expect(
-			ChartResolver.resolveChart("Hand in Hand", "MASTER", doc),
-		).toEqual({
+		expect(resolver.resolveChart("Hand in Hand", "MASTER", doc)).toEqual({
 			identifier: "380",
 			matchType: "inGameID",
 			difficulty: "MASTER",
@@ -99,11 +118,11 @@ describe("ChartResolver.resolveChart", () => {
 	});
 
 	it("disambiguates Hand in Hand anime variant", () => {
-		const doc = parseHtml(`<div>ユーフィリア(CV：高橋 李依)「アンジュ・ヴィエルジュ」</div>`);
+		const doc = parseHtml(
+			`<div>ユーフィリア(CV：高橋 李依)「アンジュ・ヴィエルジュ」</div>`,
+		);
 
-		expect(
-			ChartResolver.resolveChart("Hand in Hand", "MASTER", doc),
-		).toEqual({
+		expect(resolver.resolveChart("Hand in Hand", "MASTER", doc)).toEqual({
 			identifier: "212",
 			matchType: "inGameID",
 			difficulty: "MASTER",
@@ -111,7 +130,7 @@ describe("ChartResolver.resolveChart", () => {
 	});
 
 	it("requires detail document for disambiguated titles", () => {
-		expect(() => ChartResolver.resolveChart("Singularity", "MASTER")).toThrow(
+		expect(() => resolver.resolveChart("Singularity", "MASTER")).toThrow(
 			ParseError,
 		);
 	});
@@ -119,9 +138,24 @@ describe("ChartResolver.resolveChart", () => {
 
 describe("ChartResolver.needsDetail", () => {
 	it("returns true for titles requiring detail disambiguation", () => {
-		expect(ChartResolver.needsDetail("Singularity")).toBe(true);
-		expect(ChartResolver.needsDetail("Perfect Shining!!")).toBe(true);
-		expect(ChartResolver.needsDetail("Hand in Hand")).toBe(true);
-		expect(ChartResolver.needsDetail("WakeUP MakeUP FEVER!")).toBe(false);
+		expect(resolver.needsDetail("Singularity")).toBe(true);
+		expect(resolver.needsDetail("Perfect Shining!!")).toBe(true);
+		expect(resolver.needsDetail("Hand in Hand")).toBe(true);
+		expect(resolver.needsDetail("WakeUP MakeUP FEVER!")).toBe(false);
+	});
+});
+
+describe("chartResolver", () => {
+	it("is wired to the generated lookup tables", () => {
+		const [[title, inGameID]] = Object.entries(
+			generatedChartLookups.remasterByTitle,
+		);
+		expect(inGameID).toBeTruthy();
+
+		expect(chartResolver.resolveChart(title, "LUNATIC")).toEqual({
+			identifier: inGameID,
+			matchType: "inGameID",
+			difficulty: "LUNATIC",
+		});
 	});
 });

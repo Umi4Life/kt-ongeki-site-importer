@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+	assertLookupsUsable,
 	buildLookups,
 	emitTypeScript,
 	serializeLookupBody,
@@ -81,6 +82,38 @@ describe("buildLookups", () => {
 
 		expect(lookups.remasterByTitle["ブツメツビーターズ"]).toBeUndefined();
 		expect(lookups.lunaticByTitle["Ignored Null Lunatic"]).toBeUndefined();
+	});
+});
+
+describe("assertLookupsUsable", () => {
+	it("rejects lookups with no Re:MASTER charts", () => {
+		expect(() =>
+			assertLookupsUsable({
+				remasterByTitle: {},
+				remasterSongTitleOnly: [],
+				lunaticByTitle: { "Only Lunatic": "8001" },
+			}),
+		).toThrow(/no Re:MASTER charts/);
+	});
+
+	it("rejects lookups with no LUNATIC charts", () => {
+		expect(() =>
+			assertLookupsUsable({
+				remasterByTitle: { "Only Remaster": "8187" },
+				remasterSongTitleOnly: [],
+				lunaticByTitle: {},
+			}),
+		).toThrow(/no LUNATIC charts/);
+	});
+
+	it("accepts an empty songTitle-only list", () => {
+		expect(() =>
+			assertLookupsUsable({
+				remasterByTitle: { "Every Remaster Has An ID": "8189" },
+				remasterSongTitleOnly: [],
+				lunaticByTitle: { "Any Lunatic": "8001" },
+			}),
+		).not.toThrow();
 	});
 });
 

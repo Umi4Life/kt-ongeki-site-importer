@@ -1,6 +1,6 @@
 import { AppContext } from "../../app/context";
 import { BatchManualScore, OngekiDifficulty } from "../../domain/models/types";
-import { ChartResolver } from "../../domain/parsing/chart-resolver";
+import { chartResolver } from "../../domain/parsing/chart-resolver";
 import { ScoreParser } from "../../domain/parsing/score-parser";
 import { ONGEKI_DIFFICULTIES } from "../../config/constants";
 
@@ -27,7 +27,7 @@ export async function* collectPersonalBests(
 			const pageDifficulty = difficulty as OngekiDifficulty;
 			let detailDocument: Document | undefined;
 
-			if (ChartResolver.needsDetail(title)) {
+			if (chartResolver.needsDetail(title)) {
 				detailDocument = new DOMParser().parseFromString(
 					await ctx.ongekiNet
 						.getMusicDetail(
@@ -38,7 +38,7 @@ export async function* collectPersonalBests(
 				);
 			}
 
-			const chartMatch = ChartResolver.resolveChart(
+			const chartMatch = chartResolver.resolveChart(
 				title,
 				pageDifficulty,
 				detailDocument,

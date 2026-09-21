@@ -4,7 +4,8 @@
   "description": "Import scores from https://ongeki-net.com to Kamaitachi",
   "main": "index.js",
   "scripts": {
-    "build": "node scripts/bundle.js",
+    "build": "npm run bundle",
+    "bundle": "node scripts/bundle.js",
     "generate:lookups": "node scripts/generate-tachi-lookups.js",
     "verify:lookups": "node scripts/generate-tachi-lookups.js && git diff --exit-code -- src/ongeki-importer/config/tachi-chart-lookups.ts",
     "prebuild": "npm run generate:lookups && npm test",

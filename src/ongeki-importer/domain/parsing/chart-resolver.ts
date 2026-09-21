@@ -22,38 +22,61 @@ export interface ChartMatch {
 	difficulty: OngekiDifficulty;
 }
 
+/**
+ * Title lookup tables the resolver matches against.
+ *
+ * Injected rather than imported so the matching rules can be exercised against
+ * fixed fixtures. The production tables are regenerated from upstream Tachi
+ * seeds on a schedule, so they drift independently of this code.
+ */
+export interface ChartLookups {
+	readonly remasterByTitle: Readonly<Record<string, string>>;
+	readonly remasterSongTitleOnly: readonly string[];
+	readonly lunaticByTitle: Readonly<Record<string, string>>;
+}
+
+export const generatedChartLookups: ChartLookups = {
+	remasterByTitle: REMASTER_BY_TITLE,
+	remasterSongTitleOnly: REMASTER_SONG_TITLE_ONLY,
+	lunaticByTitle: LUNATIC_BY_TITLE,
+};
+
 const SINGULARITY_JACKET_IDS: Record<string, string> = {
 	"ac5cab7a8a61d825": "391",
 	"9cc53da5e1896b30": "454",
 	"19bdf34c7aed1ee0": "516",
 };
 
-const REMASTER_SONG_TITLE_ONLY_SET = new Set(REMASTER_SONG_TITLE_ONLY);
-
 export class ChartResolver {
-	static needsDetail(title: string): title is DetailDisambiguationTitle {
+	private readonly remasterSongTitleOnly: ReadonlySet<string>;
+
+	constructor(private readonly lookups: ChartLookups) {
+		this.remasterSongTitleOnly = new Set(lookups.remasterSongTitleOnly);
+	}
+
+	needsDetail(title: string): title is DetailDisambiguationTitle {
 		return DETAIL_DISAMBIGUATION_TITLES.includes(
 			title as DetailDisambiguationTitle,
 		);
 	}
 
-	static resolveChart(
+	resolveChart(
 		title: string,
 		pageDifficulty: OngekiDifficulty,
 		detailDoc?: HTMLElement | Document,
 	): ChartMatch {
-		if (ChartResolver.needsDetail(title)) {
+		if (this.needsDetail(title)) {
 			if (!detailDoc) {
 				throw new ParseError(
 					"ChartResolver.resolveChart",
 					`Detail document required to disambiguate "${title}".`,
 				);
 			}
-			return ChartResolver.resolveFromDetail(title, pageDifficulty, detailDoc);
+			return this.resolveFromDetail(title, pageDifficulty, detailDoc);
 		}
 
 		if (pageDifficulty === "LUNATIC") {
-			return ChartResolver.resolveLunaticTab(title);
+			return this.resolveLunaticTab(title);
 		}
 
 		return {
@@ -63,8 +86,8 @@ export class ChartResolver {
 		};
 	}
 
-	private static resolveLunaticTab(title: string): ChartMatch {
-		const remasterId = REMASTER_BY_TITLE[title];
+	private resolveLunaticTab(title: string): ChartMatch {
+		const remasterId = this.lookups.remasterByTitle[title];
 		if (remasterId) {
 			return {
 				identifier: remasterId,
@@ -74,7 +97,7 @@ export class ChartResolver {
 			};
 		}
 
-		if (REMASTER_SONG_TITLE_ONLY_SET.has(title)) {
+		if (this.remasterSongTitleOnly.has(title)) {
 			return {
 				identifier: title,
 				matchType: "songTitle",
@@ -82,7 +105,7 @@ export class ChartResolver {
 			};
 		}
 
-		const lunaticId = LUNATIC_BY_TITLE[title];
+		const lunaticId = this.lookups.lunaticByTitle[title];
 		if (lunaticId) {
 			return {
 				identifier: lunaticId,
@@ -98,18 +121,18 @@ export class ChartResolver {
 		};
 	}
 
-	private static resolveFromDetail(
+	private resolveFromDetail(
 		title: DetailDisambiguationTitle,
 		pageDifficulty: OngekiDifficulty,
 		detailDoc: HTMLElement | Document,
 	): ChartMatch {
 		switch (title) {
 			case "Singularity":
-				return ChartResolver.resolveSingularity(pageDifficulty, detailDoc);
+				return this.resolveSingularity(pageDifficulty, detailDoc);
 			case "Perfect Shining!!":
-				return ChartResolver.resolvePerfectShining(pageDifficulty, detailDoc);
+				return this.resolvePerfectShining(pageDifficulty, detailDoc);
 			case "Hand in Hand":
-				return ChartResolver.resolveHandInHand(pageDifficulty, detailDoc);
+				return this.resolveHandInHand(pageDifficulty, detailDoc);
 			default: {
 				const _exhaustive: never = title;
 				throw new ParseError(
@@ -120,7 +143,7 @@ export class ChartResolver {
 		}
 	}
 
-	private static resolveSingularity(
+	private resolveSingularity(
 		pageDifficulty: OngekiDifficulty,
 		detailDoc: HTMLElement | Document,
 	): ChartMatch {
@@ -142,7 +165,7 @@ export class ChartResolver {
 		};
 	}
 
-	private static resolvePerfectShining(
+	private resolvePerfectShining(
 		pageDifficulty: OngekiDifficulty,
 		detailDoc: HTMLElement | Document,
 	): ChartMatch {
@@ -168,7 +191,7 @@ export class ChartResolver {
 		);
 	}
 
-	private static resolveHandInHand(
+	private resolveHandInHand(
 		pageDifficulty: OngekiDifficulty,
 		detailDoc: HTMLElement | Document,
 	): ChartMatch {
@@ -206,3 +229,6 @@ export class ChartResolver {
 		return match?.[1];
 	}
 }
+
+/** Production resolver wired to the generated Tachi lookup tables. */
+export const chartResolver = new ChartResolver(generatedChartLookups);

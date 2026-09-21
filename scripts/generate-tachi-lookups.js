@@ -122,6 +122,26 @@ function formatLookupSummary(lookups) {
 	return `${Object.keys(lookups.remasterByTitle).length} Re:MASTER, ${lookups.remasterSongTitleOnly.length} Re:MASTER songTitle-only, ${Object.keys(lookups.lunaticByTitle).length} LUNATIC`;
 }
 
+/**
+ * Refuses to write tables that would silently degrade imports to songTitle
+ * matching for every chart, which is what a changed upstream seed schema looks
+ * like from here. An empty Re:MASTER songTitle-only list is legitimate: every
+ * such chart may resolve to an inGameID instead.
+ */
+export function assertLookupsUsable(lookups) {
+	if (Object.keys(lookups.remasterByTitle).length === 0) {
+		throw new Error(
+			"Generated lookups contain no Re:MASTER charts. Refusing to write; check the Tachi seed schema.",
+		);
+	}
+
+	if (Object.keys(lookups.lunaticByTitle).length === 0) {
+		throw new Error(
+			"Generated lookups contain no LUNATIC charts. Refusing to write; check the Tachi seed schema.",
+		);
+	}
+}
+
 export async function main() {
 	const [charts, songs] = await Promise.all([
 		fetchJson(CHARTS_URL),
@@ -129,6 +149,7 @@ export async function main() {
 	]);
 
 	const lookups = buildLookups(charts, songs);
+	assertLookupsUsable(lookups);
 	const wrote = writeLookupsIfChanged(lookups);
 
 	if (wrote) {

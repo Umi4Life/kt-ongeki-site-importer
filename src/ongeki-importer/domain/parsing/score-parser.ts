@@ -3,7 +3,7 @@ import { DifficultyExtractor } from "./difficulty-extractor";
 import { LampCalculator } from "./lamp-calculator";
 import { DateParser } from "./date-parser";
 import { ParseError } from "../models/errors";
-import { ChartResolver } from "./chart-resolver";
+import { chartResolver } from "./chart-resolver";
 
 export class ScoreParser {
 	static parseRecentScore(element: HTMLElement | Document): BatchManualScore {
@@ -21,11 +21,11 @@ export class ScoreParser {
 		const pageDifficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
 		let chartMatch;
 		try {
-			chartMatch = ChartResolver.resolveChart(title, pageDifficulty, element);
+			chartMatch = chartResolver.resolveChart(title, pageDifficulty, element);
 		} catch (error) {
 			if (
 				error instanceof ParseError &&
-				ChartResolver.needsDetail(title)
+				chartResolver.needsDetail(title)
 			) {
 				chartMatch = {
 					identifier: title,

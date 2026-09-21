@@ -417,6 +417,7 @@ var REMASTER_BY_TITLE = {
   "ネ！コ！": "8050",
   "ハッピータイフーン": "8054",
   "ヒバナ": "8164",
+  "ブツメツビーターズ": "8189",
   "ブリキノダンス": "8067",
   "まっすぐ→→→ストリーム！": "8104",
   "みんな Happy!!": "8030",
@@ -435,9 +436,7 @@ var REMASTER_BY_TITLE = {
   "空色メモリーズ": "8170",
   "脳漿炸裂ガール": "8166"
 };
-var REMASTER_SONG_TITLE_ONLY = [
-  "ブツメツビーターズ"
-];
+var REMASTER_SONG_TITLE_ONLY = [];
 var LUNATIC_BY_TITLE = {
   "Calamity Fortune": "8024",
   "DIE IN": "8181",
@@ -492,30 +491,40 @@ var DETAIL_DISAMBIGUATION_TITLES = [
   "Perfect Shining!!",
   "Hand in Hand"
 ];
+var generatedChartLookups = {
+  remasterByTitle: REMASTER_BY_TITLE,
+  remasterSongTitleOnly: REMASTER_SONG_TITLE_ONLY,
+  lunaticByTitle: LUNATIC_BY_TITLE
+};
 var SINGULARITY_JACKET_IDS = {
   "ac5cab7a8a61d825": "391",
   "9cc53da5e1896b30": "454",
   "19bdf34c7aed1ee0": "516"
 };
-var REMASTER_SONG_TITLE_ONLY_SET = new Set(REMASTER_SONG_TITLE_ONLY);
 var ChartResolver = class _ChartResolver {
-  static needsDetail(title) {
+  constructor(lookups) {
+    this.lookups = lookups;
+    this.remasterSongTitleOnly = new Set(lookups.remasterSongTitleOnly);
+  }
+  lookups;
+  remasterSongTitleOnly;
+  needsDetail(title) {
     return DETAIL_DISAMBIGUATION_TITLES.includes(
       title
     );
   }
-  static resolveChart(title, pageDifficulty, detailDoc) {
-    if (_ChartResolver.needsDetail(title)) {
+  resolveChart(title, pageDifficulty, detailDoc) {
+    if (this.needsDetail(title)) {
       if (!detailDoc) {
         throw new ParseError(
           "ChartResolver.resolveChart",
           `Detail document required to disambiguate "${title}".`
         );
       }
-      return _ChartResolver.resolveFromDetail(title, pageDifficulty, detailDoc);
+      return this.resolveFromDetail(title, pageDifficulty, detailDoc);
     }
     if (pageDifficulty === "LUNATIC") {
-      return _ChartResolver.resolveLunaticTab(title);
+      return this.resolveLunaticTab(title);
     }
     return {
       identifier: title,
@@ -523,8 +532,8 @@ var ChartResolver = class _ChartResolver {
       difficulty: pageDifficulty
     };
   }
-  static resolveLunaticTab(title) {
-    const remasterId = REMASTER_BY_TITLE[title];
+  resolveLunaticTab(title) {
+    const remasterId = this.lookups.remasterByTitle[title];
     if (remasterId) {
       return {
         identifier: remasterId,
@@ -533,14 +542,14 @@ var ChartResolver = class _ChartResolver {
         difficulty: "LUNATIC"
       };
     }
-    if (REMASTER_SONG_TITLE_ONLY_SET.has(title)) {
+    if (this.remasterSongTitleOnly.has(title)) {
       return {
         identifier: title,
         matchType: "songTitle",
         difficulty: "LUNATIC"
       };
     }
-    const lunaticId = LUNATIC_BY_TITLE[title];
+    const lunaticId = this.lookups.lunaticByTitle[title];
     if (lunaticId) {
       return {
         identifier: lunaticId,
@@ -554,14 +563,14 @@ var ChartResolver = class _ChartResolver {
       difficulty: "LUNATIC"
     };
   }
-  static resolveFromDetail(title, pageDifficulty, detailDoc) {
+  resolveFromDetail(title, pageDifficulty, detailDoc) {
     switch (title) {
       case "Singularity":
-        return _ChartResolver.resolveSingularity(pageDifficulty, detailDoc);
+        return this.resolveSingularity(pageDifficulty, detailDoc);
       case "Perfect Shining!!":
-        return _ChartResolver.resolvePerfectShining(pageDifficulty, detailDoc);
+        return this.resolvePerfectShining(pageDifficulty, detailDoc);
       case "Hand in Hand":
-        return _ChartResolver.resolveHandInHand(pageDifficulty, detailDoc);
+        return this.resolveHandInHand(pageDifficulty, detailDoc);
       default: {
         const _exhaustive = title;
         throw new ParseError(
@@ -571,7 +580,7 @@ var ChartResolver = class _ChartResolver {
       }
     }
   }
-  static resolveSingularity(pageDifficulty, detailDoc) {
+  resolveSingularity(pageDifficulty, detailDoc) {
     const imgSrc = detailDoc.querySelector("img.m_5.f_l")?.src;
     const jacketId = _ChartResolver.normalizeMusicImagePath(imgSrc);
     const inGameID = jacketId ? SINGULARITY_JACKET_IDS[jacketId] : void 0;
@@ -587,7 +596,7 @@ var ChartResolver = class _ChartResolver {
       difficulty: pageDifficulty
     };
   }
-  static resolvePerfectShining(pageDifficulty, detailDoc) {
+  resolvePerfectShining(pageDifficulty, detailDoc) {
     const text = detailDoc.textContent ?? "";
     if (text.includes("星咲 あかり Lv.1")) {
       return {
@@ -608,7 +617,7 @@ var ChartResolver = class _ChartResolver {
       "Unknown Perfect Shining!! variant."
     );
   }
-  static resolveHandInHand(pageDifficulty, detailDoc) {
+  resolveHandInHand(pageDifficulty, detailDoc) {
     const text = detailDoc.textContent ?? "";
     if (text.includes("ユーフィリア") || text.includes("アンジュ・ヴィエルジュ")) {
       return {
@@ -637,6 +646,7 @@ var ChartResolver = class _ChartResolver {
     return match?.[1];
   }
 };
+var chartResolver = new ChartResolver(generatedChartLookups);
 
 // src/ongeki-importer/domain/parsing/score-parser.ts
 var ScoreParser = class _ScoreParser {
@@ -653,9 +663,9 @@ var ScoreParser = class _ScoreParser {
     const pageDifficulty = DifficultyExtractor.extractFromImage(element, ".m_10 img");
     let chartMatch;
     try {
-      chartMatch = ChartResolver.resolveChart(title, pageDifficulty, element);
+      chartMatch = chartResolver.resolveChart(title, pageDifficulty, element);
     } catch (error) {
-      if (error instanceof ParseError && ChartResolver.needsDetail(title)) {
+      if (error instanceof ParseError && chartResolver.needsDetail(title)) {
         chartMatch = {
           identifier: title,
           matchType: "songTitle",
@@ -905,7 +915,7 @@ async function* collectPersonalBests(ctx) {
       const title = ScoreParser.extractPersonalBestTitle(e);
       const pageDifficulty = difficulty;
       let detailDocument;
-      if (ChartResolver.needsDetail(title)) {
+      if (chartResolver.needsDetail(title)) {
         detailDocument = new DOMParser().parseFromString(
           await ctx.ongekiNet.getMusicDetail(
             e.querySelector("input[name=idx]")?.value || ""
@@ -913,7 +923,7 @@ async function* collectPersonalBests(ctx) {
           "text/html"
         );
       }
-      const chartMatch = ChartResolver.resolveChart(
+      const chartMatch = chartResolver.resolveChart(
         title,
         pageDifficulty,
         detailDocument
