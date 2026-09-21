@@ -1,5 +1,5 @@
 import { AppContext } from "../../app/context";
-import { BatchManualScore, OngekiDifficulty } from "../../domain/models/types";
+import { BatchManualScore } from "../../domain/models/types";
 import { chartResolver } from "../../domain/parsing/chart-resolver";
 import { ScoreParser } from "../../domain/parsing/score-parser";
 import { ONGEKI_DIFFICULTIES } from "../../config/constants";
@@ -7,11 +7,11 @@ import { ONGEKI_DIFFICULTIES } from "../../config/constants";
 export async function* collectPersonalBests(
 	ctx: AppContext,
 ): AsyncGenerator<BatchManualScore> {
-	for (const [diffIdx, difficulty] of ONGEKI_DIFFICULTIES.entries()) {
+	for (const [difficulty, diff] of ONGEKI_DIFFICULTIES) {
 		ctx.status.update(`Fetching scores for ${difficulty}...`);
 
 		const resp = await ctx.ongekiNet
-			.getMusicDifficulty(diffIdx)
+			.getMusicDifficulty(diff)
 			.then((r) => r.text());
 		const scoreDocument = new DOMParser().parseFromString(resp, "text/html");
 		const scoreElements = scoreDocument.querySelectorAll<HTMLTableRowElement>(
@@ -24,7 +24,7 @@ export async function* collectPersonalBests(
 			}
 
 			const title = ScoreParser.extractPersonalBestTitle(e);
-			const pageDifficulty = difficulty as OngekiDifficulty;
+			const pageDifficulty = difficulty;
 			let detailDocument: Document | undefined;
 
 			if (chartResolver.needsDetail(title)) {

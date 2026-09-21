@@ -28,7 +28,13 @@ var KT_CLIENT_ID = KT_CONFIGS[KT_SELECTED_CONFIG].clientId;
 var ONGEKI_NET_BASE_URL = "https://ongeki-net.com/ongeki-mobile/";
 var ONGEKI_NET_REQUEST_DELAY_MS = 500;
 var __DEV__ = false;
-var ONGEKI_DIFFICULTIES = ["BASIC", "ADVANCED", "EXPERT", "MASTER", "LUNATIC"];
+var ONGEKI_DIFFICULTIES = [
+  ["BASIC", 0],
+  ["ADVANCED", 1],
+  ["EXPERT", 2],
+  ["MASTER", 3],
+  ["LUNATIC", 10]
+];
 var ONGEKI_TECHNICAL_RANK_S_THRESHOLD = 97e4;
 
 // src/ongeki-importer/infrastructure/kamaitachi-client.ts
@@ -901,9 +907,9 @@ async function submitApiKey(event, storage, status) {
 
 // src/ongeki-importer/features/personal-bests/pb-score-collector.ts
 async function* collectPersonalBests(ctx) {
-  for (const [diffIdx, difficulty] of ONGEKI_DIFFICULTIES.entries()) {
+  for (const [difficulty, diff] of ONGEKI_DIFFICULTIES) {
     ctx.status.update(`Fetching scores for ${difficulty}...`);
-    const resp = await ctx.ongekiNet.getMusicDifficulty(diffIdx).then((r) => r.text());
+    const resp = await ctx.ongekiNet.getMusicDifficulty(diff).then((r) => r.text());
     const scoreDocument = new DOMParser().parseFromString(resp, "text/html");
     const scoreElements = scoreDocument.querySelectorAll(
       `form[action="https://ongeki-net.com/ongeki-mobile/record/musicDetail/"]`
