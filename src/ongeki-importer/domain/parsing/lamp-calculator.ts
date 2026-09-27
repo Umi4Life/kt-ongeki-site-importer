@@ -1,4 +1,4 @@
-import { ONGEKI_TECHNICAL_RANK_S_THRESHOLD } from "../../config/constants";
+import { ONGEKI_TECHNICAL_RANK_S_THRESHOLD, ONGEKI_TECHNICAL_SCORE_MAX } from "../../config/constants";
 import { OngekiNoteLamp, OngekiBellLamp, LampResult } from "../models/types";
 
 export type LampCalculatorMode = "pb" | "playlog";
@@ -27,7 +27,10 @@ export class LampCalculator {
 			bellLamp = "FULL BELL";
 		}
 
-		if (comboImage.includes("abplus.png")) {
+    if (comboImage.includes("abplus.png") ||
+      comboImage.includes("abp.png") ||
+      options.score === ONGEKI_TECHNICAL_SCORE_MAX
+    ) {
 			noteLamp = "ALL BREAK+";
 		} else if (comboImage.includes("ab.png")) {
 			noteLamp = "ALL BREAK";

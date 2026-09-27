@@ -26,3 +26,4 @@ export const ONGEKI_DIFFICULTIES = [
 
 /** Technical rank S threshold; used as a LOSS fallback when ONGEKI NET icons are inconclusive. */
 export const ONGEKI_TECHNICAL_RANK_S_THRESHOLD = 970_000;
+export const ONGEKI_TECHNICAL_SCORE_MAX = 1_010_000;

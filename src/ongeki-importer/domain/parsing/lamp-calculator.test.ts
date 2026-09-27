@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LampCalculator, LampCalculatorOptions } from "./lamp-calculator";
 import { ScoreParser } from "./score-parser";
+import { ONGEKI_TECHNICAL_SCORE_MAX } from "../../config/constants";
 
 const PB_BASE = "https://ongeki-net.com/ongeki-mobile/img";
 const PLAYLOG_BASE = "https://ongeki-net.com/ongeki-mobile/img";
@@ -129,6 +130,17 @@ describe("LampCalculator.calculate", () => {
 			],
 			options: { mode: "pb", score: 830_000, overDamagePercent: 0 },
 			expected: { noteLamp: "LOSS", bellLamp: "NONE" },
+      },
+    {
+			name: "PB max score gives AB+",
+			icons: [
+				pbIcon("music_icon_back.png"),
+				pbIcon("music_icon_tr_bbb.png"),
+				pbIcon("music_icon_fb.png"),
+        pbIcon("music_icon_back.png"),
+			],
+			options: { mode: "pb", score: ONGEKI_TECHNICAL_SCORE_MAX, overDamagePercent: 0 },
+			expected: { noteLamp: "ALL BREAK+", bellLamp: "FULL BELL" },
 		},
 		{
 			name: "playlog loss from base icon in result slot",
