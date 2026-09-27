@@ -36,6 +36,7 @@ var ONGEKI_DIFFICULTIES = [
   ["LUNATIC", 10]
 ];
 var ONGEKI_TECHNICAL_RANK_S_THRESHOLD = 97e4;
+var ONGEKI_TECHNICAL_SCORE_MAX = 101e4;
 
 // src/ongeki-importer/infrastructure/kamaitachi-client.ts
 var KamaitachiClient = class {
@@ -315,7 +316,7 @@ var LampCalculator = class _LampCalculator {
     if (bellImage.includes("fb.png")) {
       bellLamp = "FULL BELL";
     }
-    if (comboImage.includes("abplus.png")) {
+    if (comboImage.includes("abplus.png") || comboImage.includes("abp.png") || options.score === ONGEKI_TECHNICAL_SCORE_MAX) {
       noteLamp = "ALL BREAK+";
     } else if (comboImage.includes("ab.png")) {
       noteLamp = "ALL BREAK";
