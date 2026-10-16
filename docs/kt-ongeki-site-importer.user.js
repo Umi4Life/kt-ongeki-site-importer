@@ -52,7 +52,7 @@ var KamaitachiClient = class {
     scores.push(...newScores);
     this.storage.setScores(JSON.stringify(scores));
     if (scores.length === 0) {
-      this.status.update("Nothing to import.");
+      this.status.update(withSkippedRows("Nothing to import.", options.skipped));
       return;
     }
     const body = {
@@ -137,9 +137,20 @@ Your scores are saved in browser storage and will be submitted next import.`
         console.error(`${error.type}: ${error.message}`);
       }
     }
-    this.status.update(message);
+    this.status.update(withSkippedRows(message, importOptions.skipped));
   }
 };
+var MAX_LISTED_SKIPPED_ROWS = 10;
+function withSkippedRows(message, skipped = []) {
+  if (skipped.length === 0) {
+    return message;
+  }
+  const listed = skipped.slice(0, MAX_LISTED_SKIPPED_ROWS).join(", ");
+  const unlisted = skipped.length - MAX_LISTED_SKIPPED_ROWS;
+  const more = unlisted > 0 ? ` and ${unlisted} more` : "";
+  return `${message}
+${skipped.length} skipped (unrecognised): ${listed}${more}`;
+}
 
 // src/ongeki-importer/domain/models/errors.ts
 var OngekiNetError = class extends Error {
@@ -920,7 +931,7 @@ async function submitApiKey(event, storage, status) {
 }
 
 // src/ongeki-importer/features/personal-bests/pb-score-collector.ts
-async function* collectPersonalBests(ctx) {
+async function* collectPersonalBests(ctx, skipped = []) {
   for (const [difficulty, diff] of ONGEKI_DIFFICULTIES) {
     ctx.status.update(`Fetching scores for ${difficulty}...`);
     const resp = await ctx.ongekiNet.getMusicDifficulty(diff).then((r) => r.text());
@@ -932,41 +943,63 @@ async function* collectPersonalBests(ctx) {
       if (!e.querySelector(`.score_table.${difficulty.toLowerCase()}_score_table.t_r.clearfix`)) {
         continue;
       }
-      const title = ScoreParser.extractPersonalBestTitle(e);
-      const pageDifficulty = difficulty;
-      let detailDocument;
-      if (chartResolver.needsDetail(title)) {
-        detailDocument = new DOMParser().parseFromString(
-          await ctx.ongekiNet.getMusicDetail(
-            e.querySelector("input[name=idx]")?.value || ""
-          ).then((r) => r.text()),
-          "text/html"
-        );
+      let score;
+      try {
+        score = await parsePersonalBest(ctx, e, difficulty);
+      } catch (err) {
+        if (!(err instanceof ParseError)) {
+          throw err;
+        }
+        const row = describeRow(e, difficulty);
+        console.error(`Skipping unparseable personal best ${row}`, err);
+        skipped.push(row);
+        continue;
       }
-      const chartMatch = chartResolver.resolveChart(
-        title,
-        pageDifficulty,
-        detailDocument
-      );
-      yield ScoreParser.parsePersonalBestScore(
-        e,
-        pageDifficulty,
-        chartMatch.identifier,
-        chartMatch.matchType,
-        chartMatch.difficulty
-      );
+      yield score;
     }
   }
+}
+function describeRow(e, difficulty) {
+  try {
+    return `${ScoreParser.extractPersonalBestTitle(e)} (${difficulty})`;
+  } catch {
+    return `untitled row (${difficulty})`;
+  }
+}
+async function parsePersonalBest(ctx, e, pageDifficulty) {
+  const title = ScoreParser.extractPersonalBestTitle(e);
+  let detailDocument;
+  if (chartResolver.needsDetail(title)) {
+    detailDocument = new DOMParser().parseFromString(
+      await ctx.ongekiNet.getMusicDetail(
+        e.querySelector("input[name=idx]")?.value || ""
+      ).then((r) => r.text()),
+      "text/html"
+    );
+  }
+  const chartMatch = chartResolver.resolveChart(
+    title,
+    pageDifficulty,
+    detailDocument
+  );
+  return ScoreParser.parsePersonalBestScore(
+    e,
+    pageDifficulty,
+    chartMatch.identifier,
+    chartMatch.matchType,
+    chartMatch.difficulty
+  );
 }
 
 // src/ongeki-importer/features/personal-bests/import-personal-bests.ts
 async function importPersonalBests(ctx) {
   const scores = [];
-  for await (const score of collectPersonalBests(ctx)) {
+  const skipped = [];
+  for await (const score of collectPersonalBests(ctx, skipped)) {
     scores.push(score);
   }
   console.log("scores to import:", scores);
-  await ctx.kamaitachi.submitScores({ scores });
+  await ctx.kamaitachi.submitScores({ scores, skipped });
 }
 
 // src/ongeki-importer/ui/navigation.ts
