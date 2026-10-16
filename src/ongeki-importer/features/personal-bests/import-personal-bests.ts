@@ -4,9 +4,10 @@ import { collectPersonalBests } from "./pb-score-collector";
 
 export async function importPersonalBests(ctx: AppContext): Promise<void> {
 	const scores: BatchManualScore[] = [];
-	for await (const score of collectPersonalBests(ctx)) {
+	const skipped: string[] = [];
+	for await (const score of collectPersonalBests(ctx, skipped)) {
 		scores.push(score);
 	}
 	console.log("scores to import:", scores);
-	await ctx.kamaitachi.submitScores({ scores });
+	await ctx.kamaitachi.submitScores({ scores, skipped });
 }

@@ -75,6 +75,7 @@ export interface ImportErrContent {
 export interface SubmitScoresOptions {
 	scores?: Array<BatchManualScore>;
 	latestTimestamp?: number;
+	skipped?: Array<string>;
 }
 
 export interface LampResult {

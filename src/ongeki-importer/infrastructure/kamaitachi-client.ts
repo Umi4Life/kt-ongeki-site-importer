@@ -23,7 +23,7 @@ export class KamaitachiClient {
 		this.storage.setScores(JSON.stringify(scores));
 
 		if (scores.length === 0) {
-			this.status.update("Nothing to import.");
+			this.status.update(withSkippedRows("Nothing to import.", options.skipped));
 			return;
 		}
 
@@ -133,6 +133,20 @@ export class KamaitachiClient {
 			}
 		}
 
-		this.status.update(message);
+		this.status.update(withSkippedRows(message, importOptions.skipped));
 	}
+}
+
+const MAX_LISTED_SKIPPED_ROWS = 10;
+
+export function withSkippedRows(message: string, skipped: Array<string> = []): string {
+	if (skipped.length === 0) {
+		return message;
+	}
+
+	const listed = skipped.slice(0, MAX_LISTED_SKIPPED_ROWS).join(", ");
+	const unlisted = skipped.length - MAX_LISTED_SKIPPED_ROWS;
+	const more = unlisted > 0 ? ` and ${unlisted} more` : "";
+
+	return `${message}\n${skipped.length} skipped (unrecognised): ${listed}${more}`;
 }
