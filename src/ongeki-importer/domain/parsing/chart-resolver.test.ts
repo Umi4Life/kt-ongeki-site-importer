@@ -107,6 +107,29 @@ describe("ChartResolver.resolveChart", () => {
 		});
 	});
 
+	it("disambiguates Perfect Shining from a full fetched Document", () => {
+		const doc = new DOMParser().parseFromString(
+			`<html><body><div>星咲 あかり Lv.39</div></body></html>`,
+			"text/html",
+		);
+
+		expect(resolver.resolveChart("Perfect Shining!!", "LUNATIC", doc)).toEqual({
+			identifier: "8091",
+			matchType: "inGameID",
+			difficulty: "LUNATIC",
+		});
+	});
+
+	it("resolves non-lunatic Perfect Shining by song title despite the loctest opponent", () => {
+		const doc = parseHtml(`<div>星咲 あかり Lv.1</div>`);
+
+		expect(resolver.resolveChart("Perfect Shining!!", "MASTER", doc)).toEqual({
+			identifier: "Perfect Shining!!",
+			matchType: "songTitle",
+			difficulty: "MASTER",
+		});
+	});
+
 	it("disambiguates Hand in Hand livetune variant", () => {
 		const doc = parseHtml(`<motion>livetune</motion>`);
 

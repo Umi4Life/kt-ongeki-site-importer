@@ -604,7 +604,14 @@ var ChartResolver = class _ChartResolver {
     };
   }
   resolvePerfectShining(pageDifficulty, detailDoc) {
-    const text = detailDoc.textContent ?? "";
+    if (pageDifficulty !== "LUNATIC") {
+      return {
+        identifier: "Perfect Shining!!",
+        matchType: "songTitle",
+        difficulty: pageDifficulty
+      };
+    }
+    const text = _ChartResolver.textOf(detailDoc);
     if (text.includes("星咲 あかり Lv.1")) {
       return {
         identifier: "8003",
@@ -625,7 +632,7 @@ var ChartResolver = class _ChartResolver {
     );
   }
   resolveHandInHand(pageDifficulty, detailDoc) {
-    const text = detailDoc.textContent ?? "";
+    const text = _ChartResolver.textOf(detailDoc);
     if (text.includes("ユーフィリア") || text.includes("アンジュ・ヴィエルジュ")) {
       return {
         identifier: "212",
@@ -644,6 +651,12 @@ var ChartResolver = class _ChartResolver {
       "ChartResolver.resolveHandInHand",
       "Unknown Hand in Hand variant."
     );
+  }
+  // Document.textContent is always null per the DOM spec; read the body instead.
+  // Duck-typed because instanceof Document fails across realms (userscript sandboxes).
+  static textOf(detailDoc) {
+    const root = "body" in detailDoc ? detailDoc.body : detailDoc;
+    return root?.textContent ?? "";
   }
   static normalizeMusicImagePath(src) {
     if (!src) {
